@@ -1,9 +1,9 @@
-const CACHE_NAME = 'gardner-valley-v13';
+const CACHE_NAME = 'gardner-valley-v14';
 const urlsToCache = [
-    './',
-    './index.html',
-    './app.js',
-    './manifest.json',
+    '/gardner-valley/',
+    '/gardner-valley/index.html',
+    '/gardner-valley/app.js',
+    '/gardner-valley/manifest.json',
     'https://unpkg.com/react@18/umd/react.production.min.js',
     'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
     'https://unpkg.com/@babel/standalone/babel.min.js',
