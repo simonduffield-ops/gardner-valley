@@ -207,34 +207,100 @@ const initialData = {
     contacts: [
         { id: 1, category: 'Utilities', name: 'Electric Company', value: '555-0100' },
         { id: 2, category: 'Utilities', name: 'Water District', value: '555-0101' },
-        { id: 3, category: 'Services', name: 'Rubbish Collection', value: 'Thursdays' },
-        { id: 4, category: 'Services', name: 'Recycling', value: 'Every 2 weeks' },
-        { id: 5, category: 'Other', name: 'WiFi Password', value: 'PropertyWiFi2024' },
-        { id: 6, category: 'Other', name: 'Gas Delivery', value: '555-0102' },
+        { id: 3, category: 'Services', name: 'Rubbish Collection', value: 'Put the bin out roadside on any wednesday night and they will pick it up on the Thursday run, and bill us only when they do a pick up.' },
+        { id: 4, category: 'Services', name: 'Recycling', value: 'Wed2 - see calendar', link: 'https://www.tasman.govt.nz/my-property/recycling-and-rubbish/kerbside-collections' },
+        { id: 5, category: 'Other', name: 'WiFi Password', value: '07082025' },
+        { id: 6, category: 'Other', name: 'Lockbox Combo', value: '3698' },
+        { id: 7, category: 'Other', name: 'Gas Delivery', value: '555-0102' },
     ],
     lists: {
         leaving: [
-            { id: 1, text: 'Turn off all lights', checked: false },
-            { id: 2, text: 'Lock all doors and windows', checked: false },
-            { id: 3, text: 'Set thermostat to away mode', checked: false },
-            { id: 4, text: 'Check all faucets are off', checked: false },
-            { id: 5, text: 'Take out trash', checked: false },
+            { id: 1, text: 'Empty rubbish bins', checked: false },
+            { id: 2, text: 'Close curtains', checked: false },
+            { id: 3, text: 'Wash towels and sheets', checked: false },
+            { id: 4, text: 'Turn off appliances - washing machine, dryer, oven, microwave, speaker', checked: false },
+            { id: 5, text: 'Remove perishable food from fridge and pantry', checked: false },
+            { id: 6, text: 'Dishes', checked: false },
+            { id: 7, text: 'Put tools and equipment away appropriately', checked: false },
+            { id: 8, text: 'Vacuum', checked: false },
+            { id: 9, text: 'Make up the beds', checked: false },
+            { id: 10, text: 'Clean bathrooms', checked: false },
+            { id: 11, text: 'Empty the fire box', checked: false },
+            { id: 12, text: 'Mow and weed eat', checked: false },
+            { id: 13, text: 'Water trees', checked: false },
+            { id: 14, text: 'Lock the doors (security poles)', checked: false },
+            { id: 15, text: 'Close windows', checked: false },
+            { id: 16, text: 'Turn off lights', checked: false },
         ],
         projects: [
-            { id: 1, text: 'Paint garden fence', completed: false },
-            { id: 2, text: 'Fix irrigation system leak', completed: false },
+            { id: 1, text: 'Quote for removing linoleum', completed: false },
+            { id: 2, text: 'Quote for painting downstairs ceiling', completed: false },
+            { id: 3, text: 'Quotes for carpet and lino', completed: false },
+            { id: 4, text: 'Outdoor fire pit', completed: false },
+            { id: 5, text: 'Fruit and nut tree planting plan', completed: false },
+            { id: 6, text: 'Back of property native planting plan', completed: false },
+            { id: 7, text: 'Driveway re-grade and gravel', completed: false },
+            { id: 8, text: 'Re-stain the house', completed: false },
+            { id: 9, text: 'Carpet bug bomb', completed: false },
+            { id: 10, text: 'Repair deck', completed: false },
+            { id: 11, text: 'Vegie garden', completed: false },
+            { id: 12, text: 'Poly tunnel', completed: false },
+            { id: 13, text: 'Fire wood seasoning cover', completed: false },
+            { id: 14, text: 'Fire wood area next to house', completed: false },
+            { id: 15, text: 'Fire wood grove planting plan', completed: false },
+            { id: 16, text: 'Covered outdoor eating area', completed: false },
+            { id: 17, text: 'Built BBQ / Pizza oven', completed: false },
+            { id: 18, text: 'Outdoor bath', completed: false },
+            { id: 19, text: 'Kitchen', completed: false },
+            { id: 20, text: 'Set up wi-fi', completed: false },
+            { id: 21, text: 'Accumulate all property information and documentation', completed: false },
+            { id: 22, text: 'Re-seal windowsills', completed: false },
+            { id: 23, text: 'Sort out downstairs toilet window condensation', completed: false },
+            { id: 24, text: 'Curtains', completed: false },
+            { id: 25, text: 'House garden spruce up', completed: false },
+            { id: 26, text: 'Property Calendar', completed: false },
+            { id: 27, text: 'Restore the pond', completed: false },
+            { id: 28, text: 'Water storage tanks', completed: false },
+            { id: 29, text: 'Rat and mice traps', completed: false },
+            { id: 30, text: 'Sort the garage', completed: false },
+            { id: 31, text: 'Lock up trailer and mower', completed: false },
+            { id: 32, text: 'Security cameras', completed: false },
+            { id: 33, text: 'Nursery area', completed: false },
+            { id: 34, text: 'De-lichen the roof', completed: false },
+            { id: 35, text: 'Fix the stair rail', completed: false },
+            { id: 36, text: 'Laundry / bathroom separation', completed: false },
+            { id: 37, text: 'Get keys cut', completed: false },
+            { id: 38, text: 'Sort the lockup and pole shed', completed: false },
+            { id: 39, text: 'Fix the range hood', completed: false },
+            { id: 40, text: 'Stake the fruit trees', completed: false },
         ],
         tasks: [
             { id: 1, text: 'Mow lawn', completed: false },
             { id: 2, text: 'Clean gutters', completed: false },
         ],
         annual: [
-            { id: 1, text: 'Service HVAC system', month: 'Spring' },
-            { id: 2, text: 'Winterize irrigation', month: 'Fall' },
+            { id: 1, text: 'Clear out window sill drain holes', month: '' },
+            { id: 2, text: 'Service the chainsaw', month: '' },
+            { id: 3, text: 'Service the ride on', month: '' },
+            { id: 4, text: 'Clear the driveway culvert', month: '' },
+            { id: 5, text: 'Rat traps', month: '' },
+            { id: 6, text: 'Feed the trees', month: '' },
+            { id: 7, text: 'Hedge trimming', month: '' },
         ],
         shopping: [
             { id: 1, text: 'Light bulbs', completed: false },
             { id: 2, text: 'Garden soil', completed: false },
+        ],
+        thingsToBuy: [
+            { id: 1, text: 'Stakes for fruit trees and straps', completed: false },
+            { id: 2, text: 'Vacuum cleaner', completed: false },
+            { id: 3, text: 'BBQ', completed: false },
+            { id: 4, text: 'Brazier', completed: false },
+            { id: 5, text: 'Outdoor furniture', completed: false },
+            { id: 6, text: 'Watering can', completed: false },
+            { id: 7, text: 'Soft buckets with handles', completed: false },
+            { id: 8, text: 'Compost bin - standing spinner', completed: false },
+            { id: 9, text: 'Air compressor hose attachment', completed: false },
         ],
     },
     calendar: [
@@ -244,11 +310,11 @@ const initialData = {
     documents: [
         {
             id: 1,
-            name: 'HVAC Manual',
+            name: 'equipment.pdf',
             category: 'Manuals',
             type: 'application/pdf',
             size: '2.5 MB',
-            uploadDate: '2025-10-01',
+            uploadDate: '2025-10-23',
             data: null, // Base64 data stored here
         },
     ],
@@ -696,7 +762,27 @@ function InfoView({ data, setData, showToast }) {
                                                         {contact.name}
                                                     </div>
                                                     <div className="text-gray-600 mt-1">
-                                                        {contact.value}
+                                                        {contact.link ? (
+                                                            <>
+                                                                {contact.value.split('calendar').map((part, index, array) => (
+                                                                    <React.Fragment key={index}>
+                                                                        {part}
+                                                                        {index < array.length - 1 && (
+                                                                            <a 
+                                                                                href={contact.link}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="text-emerald-500 underline hover:text-emerald-600"
+                                                                            >
+                                                                                calendar
+                                                                            </a>
+                                                                        )}
+                                                                    </React.Fragment>
+                                                                ))}
+                                                            </>
+                                                        ) : (
+                                                            contact.value
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2">
@@ -746,6 +832,7 @@ function ListsView({ data, setData, showToast }) {
         { id: 'tasks', label: 'Tasks' },
         { id: 'annual', label: 'Annual Jobs' },
         { id: 'shopping', label: 'Shopping' },
+        { id: 'thingsToBuy', label: 'Things to Buy' },
     ];
 
     const addItem = () => {
