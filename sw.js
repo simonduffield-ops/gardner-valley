@@ -1,13 +1,16 @@
-const CACHE_NAME = 'gardner-valley-v14';
+const CACHE_NAME = 'gardner-valley-v15';
 const urlsToCache = [
     '/gardner-valley/',
     '/gardner-valley/index.html',
     '/gardner-valley/app.js',
+    '/gardner-valley/supabase-config.js',
+    '/gardner-valley/api-service.js',
     '/gardner-valley/manifest.json',
     'https://unpkg.com/react@18/umd/react.production.min.js',
     'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
     'https://unpkg.com/@babel/standalone/babel.min.js',
-    'https://cdn.tailwindcss.com'
+    'https://cdn.tailwindcss.com',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
 // Install event - cache resources and skip waiting
