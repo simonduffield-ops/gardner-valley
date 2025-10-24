@@ -125,6 +125,62 @@ gardner-valley/
 
 ---
 
+## 🔄 Making Database Changes
+
+When you need to change the database structure (add fields, new tables, etc.):
+
+### Steps:
+
+1. **Update `database-schema.sql`**
+   - Add your changes to the file (for documentation)
+   - This keeps a record of your full schema
+
+2. **Run changes in Supabase**
+   - Go to Supabase → SQL Editor → New Query
+   - Write ONLY the new changes:
+   ```sql
+   -- Example: Add a notes field to bookings
+   ALTER TABLE calendar_bookings ADD COLUMN notes TEXT;
+   
+   -- Example: Add a new table
+   CREATE TABLE IF NOT EXISTS property_expenses (
+       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+       amount DECIMAL NOT NULL,
+       description TEXT NOT NULL,
+       date DATE NOT NULL,
+       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+   );
+   ```
+   - Click Run
+
+3. **Update `api-service.js`** (if needed)
+   - Add new API methods for the changes
+   ```javascript
+   async addExpense(expense) {
+       const { data, error } = await supabase
+           .from('property_expenses')
+           .insert(expense)
+           .select()
+           .single();
+       if (error) throw error;
+       return data;
+   }
+   ```
+
+4. **Update `app.js`** (if needed)
+   - Use the new fields/tables in your UI
+
+5. **Deploy**
+   ```bash
+   git add .
+   git commit -m "Add expense tracking"
+   git push
+   ```
+
+**Note:** Changes are immediate - anyone using the app will automatically use the new schema!
+
+---
+
 ## 🐛 Troubleshooting
 
 ### Backend Not Working?
