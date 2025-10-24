@@ -1159,16 +1159,17 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     // Touch handlers for mobile (iOS) - ListsView
     const handleTouchStart = (e, index) => {
-        e.preventDefault(); // Prevent scrolling
         const touch = e.touches[0];
         setTouchStart({ x: touch.clientX, y: touch.clientY, index });
         setDraggedItem(index);
     };
 
-    const handleTouchMove = (e, index) => {
+    const handleTouchMove = (e) => {
         if (touchStart === null || draggedItem === null) return;
         
         e.preventDefault(); // Prevent scrolling while dragging
+        e.stopPropagation(); // Stop event bubbling
+        
         const touch = e.touches[0];
         setTouchCurrent({ x: touch.clientX, y: touch.clientY });
         
@@ -1275,7 +1276,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             </div>
 
             {/* Items */}
-            <div className="space-y-2">
+            <div className="space-y-2" onTouchMove={handleTouchMove}>
                 {data.lists[activeList].map((item, index) => (
                     item.is_section ? (
                         // Section Header
@@ -1293,7 +1294,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             <div 
                                 className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
                                 onTouchStart={(e) => handleTouchStart(e, index)}
-                                onTouchMove={(e) => handleTouchMove(e, index)}
                                 onTouchEnd={handleTouchEnd}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1329,7 +1329,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             <div 
                                 className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
                                 onTouchStart={(e) => handleTouchStart(e, index)}
-                                onTouchMove={(e) => handleTouchMove(e, index)}
                                 onTouchEnd={handleTouchEnd}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1547,16 +1546,17 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     // Touch handlers for mobile (iOS) - ReferenceListsView
     const handleTouchStart = (e, index) => {
-        e.preventDefault(); // Prevent scrolling
         const touch = e.touches[0];
         setTouchStart({ x: touch.clientX, y: touch.clientY, index });
         setDraggedItem(index);
     };
 
-    const handleTouchMove = (e, index) => {
+    const handleTouchMove = (e) => {
         if (touchStart === null || draggedItem === null) return;
         
         e.preventDefault(); // Prevent scrolling while dragging
+        e.stopPropagation(); // Stop event bubbling
+        
         const touch = e.touches[0];
         setTouchCurrent({ x: touch.clientX, y: touch.clientY });
         
@@ -1633,7 +1633,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             </div>
 
             {/* Items - Checkboxes that stay visible */}
-            <div className="space-y-2">
+            <div className="space-y-2" onTouchMove={handleTouchMove}>
                 {data.lists[activeList].map((item, index) => (
                     <div
                         key={item.id}
@@ -1649,7 +1649,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                         <div 
                             className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
                             onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={(e) => handleTouchMove(e, index)}
                             onTouchEnd={handleTouchEnd}
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
