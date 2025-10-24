@@ -1268,14 +1268,26 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             window.navigator.vibrate(50);
         }
         
-        // Attach touch handlers to the handle element
-        const handleElement = e.currentTarget;
+        // Store the touch identifier
+        const touchId = e.touches[0].identifier;
         
         const handleTouchMove = (moveEvent) => {
             // Prevent scrolling while dragging
-            moveEvent.preventDefault();
+            if (moveEvent.cancelable) {
+                moveEvent.preventDefault();
+            }
             
-            const touch = moveEvent.touches[0];
+            // Find the touch that matches our identifier
+            let touch = null;
+            for (let i = 0; i < moveEvent.touches.length; i++) {
+                if (moveEvent.touches[i].identifier === touchId) {
+                    touch = moveEvent.touches[i];
+                    break;
+                }
+            }
+            
+            if (!touch || draggedRef.current === null) return;
+            
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
             
             if (element) {
@@ -1291,21 +1303,34 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             }
         };
         
-        const handleTouchEnd = () => {
-            draggedRef.current = null;
-            setDraggedItem(null);
-            setIsDragging(false);
+        const handleTouchEnd = (endEvent) => {
+            // Check if our touch ended
+            let touchEnded = true;
+            if (endEvent.touches) {
+                for (let i = 0; i < endEvent.touches.length; i++) {
+                    if (endEvent.touches[i].identifier === touchId) {
+                        touchEnded = false;
+                        break;
+                    }
+                }
+            }
             
-            // Remove listeners
-            handleElement.removeEventListener('touchmove', handleTouchMove);
-            handleElement.removeEventListener('touchend', handleTouchEnd);
-            handleElement.removeEventListener('touchcancel', handleTouchEnd);
+            if (touchEnded) {
+                draggedRef.current = null;
+                setDraggedItem(null);
+                setIsDragging(false);
+                
+                // Remove listeners from document
+                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchend', handleTouchEnd);
+                document.removeEventListener('touchcancel', handleTouchEnd);
+            }
         };
         
-        // Add listeners to the handle element
-        handleElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-        handleElement.addEventListener('touchend', handleTouchEnd);
-        handleElement.addEventListener('touchcancel', handleTouchEnd);
+        // Add listeners to document so they work even when finger moves off the handle
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
     };
 
     // Cleanup on unmount (when switching tabs)
@@ -1741,14 +1766,26 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             window.navigator.vibrate(50);
         }
         
-        // Attach touch handlers to the handle element
-        const handleElement = e.currentTarget;
+        // Store the touch identifier
+        const touchId = e.touches[0].identifier;
         
         const handleTouchMove = (moveEvent) => {
             // Prevent scrolling while dragging
-            moveEvent.preventDefault();
+            if (moveEvent.cancelable) {
+                moveEvent.preventDefault();
+            }
             
-            const touch = moveEvent.touches[0];
+            // Find the touch that matches our identifier
+            let touch = null;
+            for (let i = 0; i < moveEvent.touches.length; i++) {
+                if (moveEvent.touches[i].identifier === touchId) {
+                    touch = moveEvent.touches[i];
+                    break;
+                }
+            }
+            
+            if (!touch || draggedRef.current === null) return;
+            
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
             
             if (element) {
@@ -1764,21 +1801,34 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             }
         };
         
-        const handleTouchEnd = () => {
-            draggedRef.current = null;
-            setDraggedItem(null);
-            setIsDragging(false);
+        const handleTouchEnd = (endEvent) => {
+            // Check if our touch ended
+            let touchEnded = true;
+            if (endEvent.touches) {
+                for (let i = 0; i < endEvent.touches.length; i++) {
+                    if (endEvent.touches[i].identifier === touchId) {
+                        touchEnded = false;
+                        break;
+                    }
+                }
+            }
             
-            // Remove listeners
-            handleElement.removeEventListener('touchmove', handleTouchMove);
-            handleElement.removeEventListener('touchend', handleTouchEnd);
-            handleElement.removeEventListener('touchcancel', handleTouchEnd);
+            if (touchEnded) {
+                draggedRef.current = null;
+                setDraggedItem(null);
+                setIsDragging(false);
+                
+                // Remove listeners from document
+                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchend', handleTouchEnd);
+                document.removeEventListener('touchcancel', handleTouchEnd);
+            }
         };
         
-        // Add listeners to the handle element
-        handleElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-        handleElement.addEventListener('touchend', handleTouchEnd);
-        handleElement.addEventListener('touchcancel', handleTouchEnd);
+        // Add listeners to document so they work even when finger moves off the handle
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
     };
 
     // Cleanup on unmount (when switching tabs)
