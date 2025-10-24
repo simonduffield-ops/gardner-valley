@@ -1171,12 +1171,13 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const handleTouchMove = (e) => {
         if (!isDragging || draggedRef.current === null) {
-            // Cancel long press if user starts scrolling
-            clearTimeout(longPressTimer.current);
+            // Not dragging - allow normal scrolling
             return;
         }
         
+        // Only prevent default when actively dragging
         e.preventDefault();
+        e.stopPropagation();
         
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -1594,12 +1595,13 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     const handleTouchMove = (e) => {
         if (!isDragging || draggedRef.current === null) {
-            // Cancel long press if user starts scrolling
-            clearTimeout(longPressTimer.current);
+            // Not dragging - allow normal scrolling
             return;
         }
         
+        // Only prevent default when actively dragging
         e.preventDefault();
+        e.stopPropagation();
         
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
