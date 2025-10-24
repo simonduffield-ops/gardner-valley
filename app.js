@@ -1110,45 +1110,83 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const toggleItem = async (id) => {
+        const item = data.lists[activeList].find(i => i.id === id);
+        const newValue = !item.completed;
+        
+        // Optimistic update - update UI immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: data.lists[activeList].map(item =>
+                    item.id === id
+                        ? { ...item, completed: !item.completed }
+                        : item
+                ),
+            },
+        });
+        
+        // Sync with backend in background
         if (useBackend) {
-            const item = data.lists[activeList].find(i => i.id === id);
-            const newValue = !item.completed;
-            
-            await updateData(async () => {
+            try {
                 await propertyAPI.updateListItem(id, { completed: newValue });
-            });
-        } else {
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: data.lists[activeList].map(item =>
-                        item.id === id
-                            ? { ...item, completed: !item.completed }
-                            : item
-                    ),
-                },
-            });
+            } catch (error) {
+                console.error('Error updating item:', error);
+                showToast('Failed to update item', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: data.lists[activeList].map(item =>
+                            item.id === id
+                                ? { ...item, completed: !newValue }
+                                : item
+                        ),
+                    },
+                });
+            }
         }
     };
 
     const deleteItem = async (id) => {
-        if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.deleteListItem(id);
-            });
-        } else {
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: data.lists[activeList].filter(item => item.id !== id),
-                },
-            });
-        }
+        // Store the item in case we need to revert
+        const deletedItem = data.lists[activeList].find(item => item.id === id);
+        const deletedIndex = data.lists[activeList].findIndex(item => item.id === id);
+        
+        // Optimistic update - remove from UI immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: data.lists[activeList].filter(item => item.id !== id),
+            },
+        });
         
         setConfirmDelete(null);
         showToast('Item deleted');
+        
+        // Sync with backend in background
+        if (useBackend) {
+            try {
+                await propertyAPI.deleteListItem(id);
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                showToast('Failed to delete item', 'error');
+                // Revert on error - restore the item
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: [
+                            ...data.lists[activeList].slice(0, deletedIndex),
+                            deletedItem,
+                            ...data.lists[activeList].slice(deletedIndex)
+                        ],
+                    },
+                });
+            }
+        }
     };
 
     // Save all items' sort order to backend (debounced)
@@ -1526,66 +1564,109 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     };
 
     const toggleItem = async (id) => {
+        const item = data.lists[activeList].find(i => i.id === id);
+        const newValue = !item.checked;
+        
+        // Optimistic update - update UI immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: data.lists[activeList].map(item =>
+                    item.id === id
+                        ? { ...item, checked: !item.checked }
+                        : item
+                ),
+            },
+        });
+        
+        // Sync with backend in background
         if (useBackend) {
-            const item = data.lists[activeList].find(i => i.id === id);
-            const newValue = !item.checked;
-            
-            await updateData(async () => {
+            try {
                 await propertyAPI.updateListItem(id, { checked: newValue });
-            });
-        } else {
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: data.lists[activeList].map(item =>
-                        item.id === id
-                            ? { ...item, checked: !item.checked }
-                            : item
-                    ),
-                },
-            });
+            } catch (error) {
+                console.error('Error updating item:', error);
+                showToast('Failed to update item', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: data.lists[activeList].map(item =>
+                            item.id === id
+                                ? { ...item, checked: !newValue }
+                                : item
+                        ),
+                    },
+                });
+            }
         }
     };
 
     const deleteItem = async (id) => {
-        if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.deleteListItem(id);
-            });
-        } else {
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: data.lists[activeList].filter(item => item.id !== id),
-                },
-            });
-        }
+        // Store the item in case we need to revert
+        const deletedItem = data.lists[activeList].find(item => item.id === id);
+        const deletedIndex = data.lists[activeList].findIndex(item => item.id === id);
+        
+        // Optimistic update - remove from UI immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: data.lists[activeList].filter(item => item.id !== id),
+            },
+        });
         
         setConfirmDelete(null);
         showToast('Item deleted');
+        
+        // Sync with backend in background
+        if (useBackend) {
+            try {
+                await propertyAPI.deleteListItem(id);
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                showToast('Failed to delete item', 'error');
+                // Revert on error - restore the item
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: [
+                            ...data.lists[activeList].slice(0, deletedIndex),
+                            deletedItem,
+                            ...data.lists[activeList].slice(deletedIndex)
+                        ],
+                    },
+                });
+            }
+        }
     };
 
     const uncheckAll = async () => {
+        // Optimistic update - update UI immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: data.lists[activeList].map(item => ({ ...item, checked: false })),
+            },
+        });
+        
+        showToast('All items unchecked');
+        
+        // Sync with backend in background
         if (useBackend) {
-            await updateData(async () => {
-                // Update all items in current list to unchecked
+            try {
                 const updatePromises = data.lists[activeList].map(item => 
                     propertyAPI.updateListItem(item.id, { checked: false })
                 );
                 await Promise.all(updatePromises);
-            });
-        } else {
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: data.lists[activeList].map(item => ({ ...item, checked: false })),
-                },
-            });
+            } catch (error) {
+                console.error('Error unchecking all items:', error);
+                showToast('Failed to sync changes', 'error');
+            }
         }
-        showToast('All items unchecked');
     };
 
     // Save all items' sort order to backend (debounced)
