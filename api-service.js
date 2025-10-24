@@ -217,6 +217,7 @@ class PropertyAPI {
                     text: item.text,
                     checked: item.checked || false,
                     completed: item.completed || false,
+                    is_section: item.is_section || false,
                     month: item.month || null,
                     sort_order: item.sort_order || 0
                 })
