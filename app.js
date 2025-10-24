@@ -1038,9 +1038,10 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const draggedRef = useRef(null);
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [isLongPressing, setIsLongPressing] = useState(false);
+    const isLongPressingRef = useRef(false);
     const touchStartY = useRef(0);
     const touchStartX = useRef(0);
+    const hasMoved = useRef(false);
     const saveOrderTimer = useRef(null);
     const pendingSave = useRef(false);
 
@@ -1214,7 +1215,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - Safari-compatible with proper scroll prevention
+    // Mobile touch handlers - Refined with immediate ref-based detection
     const handleTouchStart = (e, index) => {
         // Don't interfere with button clicks
         if (e.target.closest('button')) {
@@ -1224,21 +1225,25 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const touch = e.touches[0];
         touchStartY.current = touch.clientY;
         touchStartX.current = touch.clientX;
+        hasMoved.current = false;
         
-        // Start long press - set state immediately to prevent scroll
-        setIsLongPressing(true);
+        // Use ref for immediate effect (no async state delay)
+        isLongPressingRef.current = true;
         
         longPressTimer.current = setTimeout(() => {
-            // Start drag after long press
-            draggedRef.current = index;
-            setDraggedItem(index);
-            setIsDragging(true);
-            
-            // Haptic feedback
-            if (window.navigator.vibrate) {
-                window.navigator.vibrate(50);
+            // Only start drag if user hasn't scrolled away
+            if (isLongPressingRef.current) {
+                draggedRef.current = index;
+                setDraggedItem(index);
+                setIsDragging(true);
+                isLongPressingRef.current = false;
+                
+                // Haptic feedback
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(50);
+                }
             }
-        }, 300);
+        }, 250); // Slightly faster response
     };
 
     const handleTouchMove = (e, index) => {
@@ -1247,17 +1252,21 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const deltaX = Math.abs(touch.clientX - touchStartX.current);
         
         // If long-pressing but not yet dragging
-        if (isLongPressing && !isDragging) {
-            // Check if user is trying to scroll (significant vertical movement)
-            if (deltaY > 10 && deltaY > deltaX) {
-                // User is scrolling, cancel the long press and allow scroll
-                clearTimeout(longPressTimer.current);
-                longPressTimer.current = null;
-                setIsLongPressing(false);
-                return; // Allow default scroll behavior
+        if (isLongPressingRef.current && !isDragging) {
+            // On first movement, check intent
+            if (!hasMoved.current && (deltaY > 5 || deltaX > 5)) {
+                hasMoved.current = true;
+                
+                // If moving mostly vertical, it's a scroll
+                if (deltaY > deltaX * 1.5) {
+                    clearTimeout(longPressTimer.current);
+                    longPressTimer.current = null;
+                    isLongPressingRef.current = false;
+                    return; // Allow scroll
+                }
             }
             
-            // Small movement during long press - prevent scroll
+            // Prevent scroll during long-press detection
             if (e.cancelable) {
                 e.preventDefault();
             }
@@ -1291,7 +1300,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const handleTouchEnd = (e) => {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
-        setIsLongPressing(false);
+        isLongPressingRef.current = false;
+        hasMoved.current = false;
         
         if (isDragging) {
             // End the drag
@@ -1305,7 +1315,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         // Handle touch interruptions (calls, notifications, etc.)
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
-        setIsLongPressing(false);
+        isLongPressingRef.current = false;
+        hasMoved.current = false;
         draggedRef.current = null;
         setDraggedItem(null);
         setIsDragging(false);
@@ -1528,9 +1539,10 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const draggedRef = useRef(null);
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [isLongPressing, setIsLongPressing] = useState(false);
+    const isLongPressingRef = useRef(false);
     const touchStartY = useRef(0);
     const touchStartX = useRef(0);
+    const hasMoved = useRef(false);
     const saveOrderTimer = useRef(null);
     const pendingSave = useRef(false);
 
@@ -1693,7 +1705,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - Safari-compatible with proper scroll prevention
+    // Mobile touch handlers - Refined with immediate ref-based detection
     const handleTouchStart = (e, index) => {
         // Don't interfere with button clicks
         if (e.target.closest('button')) {
@@ -1703,21 +1715,25 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         const touch = e.touches[0];
         touchStartY.current = touch.clientY;
         touchStartX.current = touch.clientX;
+        hasMoved.current = false;
         
-        // Start long press - set state immediately to prevent scroll
-        setIsLongPressing(true);
+        // Use ref for immediate effect (no async state delay)
+        isLongPressingRef.current = true;
         
         longPressTimer.current = setTimeout(() => {
-            // Start drag after long press
-            draggedRef.current = index;
-            setDraggedItem(index);
-            setIsDragging(true);
-            
-            // Haptic feedback
-            if (window.navigator.vibrate) {
-                window.navigator.vibrate(50);
+            // Only start drag if user hasn't scrolled away
+            if (isLongPressingRef.current) {
+                draggedRef.current = index;
+                setDraggedItem(index);
+                setIsDragging(true);
+                isLongPressingRef.current = false;
+                
+                // Haptic feedback
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(50);
+                }
             }
-        }, 300);
+        }, 250); // Slightly faster response
     };
 
     const handleTouchMove = (e, index) => {
@@ -1726,17 +1742,21 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         const deltaX = Math.abs(touch.clientX - touchStartX.current);
         
         // If long-pressing but not yet dragging
-        if (isLongPressing && !isDragging) {
-            // Check if user is trying to scroll (significant vertical movement)
-            if (deltaY > 10 && deltaY > deltaX) {
-                // User is scrolling, cancel the long press and allow scroll
-                clearTimeout(longPressTimer.current);
-                longPressTimer.current = null;
-                setIsLongPressing(false);
-                return; // Allow default scroll behavior
+        if (isLongPressingRef.current && !isDragging) {
+            // On first movement, check intent
+            if (!hasMoved.current && (deltaY > 5 || deltaX > 5)) {
+                hasMoved.current = true;
+                
+                // If moving mostly vertical, it's a scroll
+                if (deltaY > deltaX * 1.5) {
+                    clearTimeout(longPressTimer.current);
+                    longPressTimer.current = null;
+                    isLongPressingRef.current = false;
+                    return; // Allow scroll
+                }
             }
             
-            // Small movement during long press - prevent scroll
+            // Prevent scroll during long-press detection
             if (e.cancelable) {
                 e.preventDefault();
             }
@@ -1770,7 +1790,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const handleTouchEnd = (e) => {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
-        setIsLongPressing(false);
+        isLongPressingRef.current = false;
+        hasMoved.current = false;
         
         if (isDragging) {
             // End the drag
@@ -1784,7 +1805,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         // Handle touch interruptions (calls, notifications, etc.)
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
-        setIsLongPressing(false);
+        isLongPressingRef.current = false;
+        hasMoved.current = false;
         draggedRef.current = null;
         setDraggedItem(null);
         setIsDragging(false);
