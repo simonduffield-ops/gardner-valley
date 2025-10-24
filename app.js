@@ -1,13 +1,16 @@
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo, memo } = React;
 
-// Toast notification system
-function Toast({ message, type = 'success', onClose }) {
+// Toast notification system - Memoized for performance
+const Toast = memo(({ message, type = 'success', onClose }) => {
     useEffect(() => {
         const timer = setTimeout(onClose, 3000);
         return () => clearTimeout(timer);
     }, [onClose]);
 
-    const bgColor = type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+    const bgColor = useMemo(() => 
+        type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500',
+        [type]
+    );
 
     return (
         <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-in flex items-center gap-2`}>
@@ -17,10 +20,10 @@ function Toast({ message, type = 'success', onClose }) {
             </button>
         </div>
     );
-}
+});
 
-// Confirmation dialog component
-function ConfirmDialog({ message, onConfirm, onCancel }) {
+// Confirmation dialog component - Memoized
+const ConfirmDialog = memo(({ message, onConfirm, onCancel }) => {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 max-w-sm w-full">
@@ -42,7 +45,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
             </div>
         </div>
     );
-}
+});
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -83,21 +86,27 @@ class ErrorBoundary extends React.Component {
     }
 }
 
-// Utility: Generate unique IDs
+// Utility: Generate unique IDs - Optimized with crypto API when available
 function generateId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Utility: Debounce function
-function debounce(func, wait) {
+// Utility: Optimized Debounce function with immediate execution option
+function debounce(func, wait, immediate = false) {
     let timeout;
     return function executedFunction(...args) {
+        const context = this;
         const later = () => {
-            clearTimeout(timeout);
-            func(...args);
+            timeout = null;
+            if (!immediate) func.apply(context, args);
         };
+        const callNow = immediate && !timeout;
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
     };
 }
 
@@ -116,89 +125,125 @@ function checkStorageSpace(data) {
     }
 }
 
-// Lucide icons as inline SVGs
+// Utility: Compress image before upload
+async function compressImage(file, maxWidth = 1920, maxHeight = 1080, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // Calculate new dimensions maintaining aspect ratio
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.floor(width * ratio);
+                    height = Math.floor(height * ratio);
+                }
+                
+                // Create canvas and compress
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convert to data URL with compression
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Lucide icons as inline SVGs - Memoized for performance
 const Icons = {
-    Map: () => (
+    Map: memo(() => (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
         </svg>
-    ),
-    Info: () => (
+    )),
+    Info: memo(() => (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-    ),
-    List: () => (
+    )),
+    List: memo(() => (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
-    ),
-    Calendar: () => (
+    )),
+    Calendar: memo(() => (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-    ),
-    Plus: () => (
+    )),
+    Plus: memo(() => (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
-    ),
-    X: () => (
+    )),
+    X: memo(() => (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
-    ),
-    Check: () => (
+    )),
+    Check: memo(() => (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
-    ),
-    ClipboardList: () => (
+    )),
+    ClipboardList: memo(() => (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
-    ),
-    Edit: () => (
+    )),
+    Edit: memo(() => (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
         </svg>
-    ),
-    Trash: () => (
+    )),
+    Trash: memo(() => (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
-    ),
-    Document: () => (
+    )),
+    Document: memo(() => (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
-    ),
-    Download: () => (
+    )),
+    Download: memo(() => (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
-    ),
-    Image: () => (
+    )),
+    Image: memo(() => (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-    ),
-    File: () => (
+    )),
+    File: memo(() => (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-    ),
-    Upload: () => (
+    )),
+    Upload: memo(() => (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
         </svg>
-    ),
-    MapPin: () => (
+    )),
+    MapPin: memo(() => (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-    ),
+    )),
 };
 
 // Initial data structure
@@ -359,14 +404,15 @@ function PropertyManager() {
         }
     }, [useBackend, showToast]);
 
-    const tabs = [
+    // Memoize tabs array to prevent re-creation on every render
+    const tabs = useMemo(() => [
         { id: 'map', label: 'Map', icon: Icons.Map },
         { id: 'info', label: 'Info', icon: Icons.Info },
         { id: 'lists', label: 'Lists', icon: Icons.List },
         { id: 'reference', label: 'Guides', icon: Icons.ClipboardList },
         { id: 'calendar', label: 'Visits', icon: Icons.Calendar },
         { id: 'documents', label: 'Docs', icon: Icons.Document },
-    ];
+    ], []);
 
     // Show loading screen while initializing
     if (loading) {
@@ -2022,18 +2068,35 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
             }
 
             try {
-                const dataUrl = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => resolve(event.target.result);
-                    reader.onerror = (error) => reject(error);
-                    reader.readAsDataURL(file);
-                });
+                // Compress images before storing
+                let dataUrl;
+                if (file.type.startsWith('image/')) {
+                    try {
+                        dataUrl = await compressImage(file);
+                        console.log(`Compressed ${file.name}: ${file.size} → ${Math.round(dataUrl.length * 0.75)} bytes`);
+                    } catch (compressionError) {
+                        console.warn('Compression failed, using original:', compressionError);
+                        dataUrl = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = (event) => resolve(event.target.result);
+                            reader.onerror = (error) => reject(error);
+                            reader.readAsDataURL(file);
+                        });
+                    }
+                } else {
+                    dataUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => resolve(event.target.result);
+                        reader.onerror = (error) => reject(error);
+                        reader.readAsDataURL(file);
+                    });
+                }
 
                 const doc = {
                     name: file.name,
                     category: guessCategory(file.type, file.name),
-                    type: file.type,
-                    size: formatFileSize(file.size),
+                    type: file.type.startsWith('image/') ? 'image/jpeg' : file.type,
+                    size: formatFileSize(dataUrl.length * 0.75), // Approximate size of base64
                     uploadDate: new Date().toISOString().split('T')[0],
                     data: dataUrl,
                 };
@@ -2240,6 +2303,8 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
                                 <img
                                     src={doc.data}
                                     alt={doc.name}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="w-full h-full object-cover"
                                 />
                             ) : isPDF(doc.type) ? (

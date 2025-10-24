@@ -64,7 +64,13 @@ CREATE TABLE IF NOT EXISTS documents (
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_list_items_type ON list_items(list_type);
+CREATE INDEX IF NOT EXISTS idx_list_items_type_order ON list_items(list_type, sort_order);
 CREATE INDEX IF NOT EXISTS idx_calendar_bookings_dates ON calendar_bookings(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_calendar_bookings_start ON calendar_bookings(start_date DESC);
+CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category);
+CREATE INDEX IF NOT EXISTS idx_documents_upload_date ON documents(upload_date DESC);
+CREATE INDEX IF NOT EXISTS idx_contacts_category ON contacts(category);
+CREATE INDEX IF NOT EXISTS idx_map_markers_type ON map_markers(type);
 
 -- Disable Row Level Security - Everyone has full access
 ALTER TABLE map_markers DISABLE ROW LEVEL SECURITY;

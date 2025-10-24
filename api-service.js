@@ -5,6 +5,50 @@ class PropertyAPI {
     constructor() {
         this.isOnline = true;
         this.initialized = false;
+        this.cache = new Map(); // Simple cache for GET requests
+        this.cacheDuration = 5000; // Cache duration in ms (5 seconds)
+        this.pendingRequests = new Map(); // Request deduplication
+    }
+
+    // Cache helper methods
+    getCacheKey(table, params = {}) {
+        return `${table}:${JSON.stringify(params)}`;
+    }
+
+    getCached(key) {
+        const cached = this.cache.get(key);
+        if (cached && Date.now() - cached.timestamp < this.cacheDuration) {
+            return cached.data;
+        }
+        this.cache.delete(key);
+        return null;
+    }
+
+    setCache(key, data) {
+        this.cache.set(key, { data, timestamp: Date.now() });
+        // Limit cache size to prevent memory issues
+        if (this.cache.size > 50) {
+            const firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+        }
+    }
+
+    clearCache() {
+        this.cache.clear();
+    }
+
+    // Request deduplication - prevents multiple identical requests
+    async dedupedRequest(key, requestFn) {
+        if (this.pendingRequests.has(key)) {
+            return this.pendingRequests.get(key);
+        }
+
+        const promise = requestFn().finally(() => {
+            this.pendingRequests.delete(key);
+        });
+
+        this.pendingRequests.set(key, promise);
+        return promise;
     }
 
     // Initialize Supabase connection
@@ -29,17 +73,25 @@ class PropertyAPI {
     // ==================== MAP MARKERS ====================
 
     async getMapMarkers() {
-        try {
-            const { data, error } = await supabase
-                .from('map_markers')
-                .select('*')
-                .order('created_at');
+        const cacheKey = this.getCacheKey('map_markers');
+        const cached = this.getCached(cacheKey);
+        if (cached) return cached;
 
-            if (error) throw error;
-            return data || [];
-        } catch (error) {
-            this.handleError(error, 'getMapMarkers');
-        }
+        return this.dedupedRequest(cacheKey, async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('map_markers')
+                    .select('*')
+                    .order('created_at');
+
+                if (error) throw error;
+                const result = data || [];
+                this.setCache(cacheKey, result);
+                return result;
+            } catch (error) {
+                this.handleError(error, 'getMapMarkers');
+            }
+        });
     }
 
     async addMapMarker(marker) {
@@ -56,6 +108,8 @@ class PropertyAPI {
                 .single();
 
             if (error) throw error;
+            // Invalidate cache after mutation
+            this.cache.delete(this.getCacheKey('map_markers'));
             return data;
         } catch (error) {
             this.handleError(error, 'addMapMarker');
@@ -72,6 +126,8 @@ class PropertyAPI {
                 .single();
 
             if (error) throw error;
+            // Invalidate cache after mutation
+            this.cache.delete(this.getCacheKey('map_markers'));
             return data;
         } catch (error) {
             this.handleError(error, 'updateMapMarker');
@@ -86,6 +142,8 @@ class PropertyAPI {
                 .eq('id', id);
 
             if (error) throw error;
+            // Invalidate cache after mutation
+            this.cache.delete(this.getCacheKey('map_markers'));
             return true;
         } catch (error) {
             this.handleError(error, 'deleteMapMarker');
