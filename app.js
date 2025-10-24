@@ -502,11 +502,6 @@ function PropertyManager() {
                     <span>Syncing...</span>
                 </div>
             )}
-            {useBackend && !syncing && (
-                <div className="fixed top-4 left-4 bg-emerald-600 text-white px-3 py-1 rounded-lg shadow text-xs z-40">
-                    ☁️ Backend Active
-                </div>
-            )}
             {/* Header with Export/Import */}
             <header className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-4 shadow-lg">
                 <div className="flex justify-between items-center">
@@ -748,31 +743,52 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
     const [editingId, setEditingId] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
 
-    const addContact = () => {
+    const addContact = async () => {
         if (!newContact.name || !newContact.value) return;
-        const contact = { id: generateId(), ...newContact };
-        setData({ ...data, contacts: [...data.contacts, contact] });
+        
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.addContact(newContact);
+            });
+        } else {
+            const contact = { id: generateId(), ...newContact };
+            setData({ ...data, contacts: [...data.contacts, contact] });
+        }
+        
         setNewContact({ category: 'Utilities', name: '', value: '' });
         setShowAddContact(false);
         showToast('Contact added successfully!');
     };
 
-    const deleteContact = (id) => {
-        setData({
-            ...data,
-            contacts: data.contacts.filter(c => c.id !== id),
-        });
+    const deleteContact = async (id) => {
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.deleteContact(id);
+            });
+        } else {
+            setData({
+                ...data,
+                contacts: data.contacts.filter(c => c.id !== id),
+            });
+        }
+        
         setConfirmDelete(null);
         showToast('Contact deleted');
     };
 
-    const updateContact = (id, field, value) => {
-        setData({
-            ...data,
-            contacts: data.contacts.map(c =>
-                c.id === id ? { ...c, [field]: value } : c
-            ),
-        });
+    const updateContact = async (id, field, value) => {
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.updateContact(id, { [field]: value });
+            });
+        } else {
+            setData({
+                ...data,
+                contacts: data.contacts.map(c =>
+                    c.id === id ? { ...c, [field]: value } : c
+                ),
+            });
+        }
     };
 
     const groupedContacts = data.contacts.reduce((acc, contact) => {
@@ -929,65 +945,90 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
 }
 
 function ListsView({ data, setData, showToast, useBackend, updateData }) {
-    const [activeList, setActiveList] = useState('leaving');
+    const [activeList, setActiveList] = useState('shopping');
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
 
     const listTypes = [
+        { id: 'shopping', label: 'Shopping' },
         { id: 'leaving', label: 'Leaving Checklist' },
         { id: 'projects', label: 'Projects' },
         { id: 'tasks', label: 'Tasks' },
         { id: 'annual', label: 'Annual Jobs' },
-        { id: 'shopping', label: 'Shopping' },
         { id: 'thingsToBuy', label: 'Things to Buy' },
     ];
 
-    const addItem = () => {
+    const addItem = async () => {
         if (!newItemText.trim()) return;
         
         const newItem = {
-            id: generateId(),
             text: newItemText,
             ...(activeList === 'leaving' ? { checked: false } : { completed: false }),
         };
         
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: [...data.lists[activeList], newItem],
-            },
-        });
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.addListItem(activeList, newItem);
+            });
+        } else {
+            newItem.id = generateId();
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: [...data.lists[activeList], newItem],
+                },
+            });
+        }
+        
         setNewItemText('');
         showToast('Item added!');
     };
 
-    const toggleItem = (id) => {
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].map(item =>
-                    item.id === id
-                        ? {
-                              ...item,
-                              [activeList === 'leaving' ? 'checked' : 'completed']:
-                                  !(activeList === 'leaving' ? item.checked : item.completed),
-                          }
-                        : item
-                ),
-            },
-        });
+    const toggleItem = async (id) => {
+        if (useBackend) {
+            // Find the item to get current state
+            const item = data.lists[activeList].find(i => i.id === id);
+            const field = activeList === 'leaving' ? 'checked' : 'completed';
+            const newValue = !item[field];
+            
+            await updateData(async () => {
+                await propertyAPI.updateListItem(id, { [field]: newValue });
+            });
+        } else {
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: data.lists[activeList].map(item =>
+                        item.id === id
+                            ? {
+                                  ...item,
+                                  [activeList === 'leaving' ? 'checked' : 'completed']:
+                                      !(activeList === 'leaving' ? item.checked : item.completed),
+                              }
+                            : item
+                    ),
+                },
+            });
+        }
     };
 
-    const deleteItem = (id) => {
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].filter(item => item.id !== id),
-            },
-        });
+    const deleteItem = async (id) => {
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.deleteListItem(id);
+            });
+        } else {
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: data.lists[activeList].filter(item => item.id !== id),
+                },
+            });
+        }
+        
         setConfirmDelete(null);
         showToast('Item deleted');
     };
