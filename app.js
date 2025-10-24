@@ -1072,9 +1072,12 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         }
     };
 
+    // Desktop drag handlers
     const handleDragStart = (e, index) => {
         setDraggedItem(index);
-        e.dataTransfer.effectAllowed = 'move';
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+        }
     };
 
     const handleDragOver = (e, index) => {
@@ -1087,6 +1090,42 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const handleDragEnd = () => {
         setDraggedItem(null);
+        setTouchStart(null);
+        setTouchCurrent(null);
+    };
+
+    // Touch handlers for mobile (iOS)
+    const handleTouchStart = (e, index) => {
+        const touch = e.touches[0];
+        setTouchStart({ x: touch.clientX, y: touch.clientY, index });
+        setDraggedItem(index);
+    };
+
+    const handleTouchMove = (e, index) => {
+        if (touchStart === null) return;
+        
+        const touch = e.touches[0];
+        setTouchCurrent({ x: touch.clientX, y: touch.clientY });
+        
+        // Calculate which item we're over
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (element) {
+            const itemElement = element.closest('[data-item-index]');
+            if (itemElement) {
+                const newIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                if (newIndex !== draggedItem && newIndex !== null && !isNaN(newIndex)) {
+                    reorderItems(draggedItem, newIndex);
+                    setDraggedItem(newIndex);
+                    setTouchStart({ ...touchStart, index: newIndex });
+                }
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setDraggedItem(null);
+        setTouchStart(null);
+        setTouchCurrent(null);
     };
 
     return (
@@ -1163,10 +1202,14 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         // Section Header
                         <div
                             key={item.id}
+                            data-item-index={index}
                             draggable
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={(e) => handleDragOver(e, index)}
                             onDragEnd={handleDragEnd}
+                            onTouchStart={(e) => handleTouchStart(e, index)}
+                            onTouchMove={(e) => handleTouchMove(e, index)}
+                            onTouchEnd={handleTouchEnd}
                             className={`bg-gradient-to-r from-gray-100 to-gray-50 p-3 rounded-lg flex items-center gap-3 cursor-move active:opacity-50 transition-opacity border-l-4 border-emerald-500 ${
                                 draggedItem === index ? 'opacity-50' : ''
                             }`}
@@ -1190,10 +1233,14 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         // Regular Item
                         <div
                             key={item.id}
+                            data-item-index={index}
                             draggable
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={(e) => handleDragOver(e, index)}
                             onDragEnd={handleDragEnd}
+                            onTouchStart={(e) => handleTouchStart(e, index)}
+                            onTouchMove={(e) => handleTouchMove(e, index)}
+                            onTouchEnd={handleTouchEnd}
                             className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
                                 draggedItem === index ? 'opacity-50' : ''
                             }`}
@@ -1257,6 +1304,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchCurrent, setTouchCurrent] = useState(null);
 
     const listTypes = [
         { id: 'leaving', label: 'Leaving Checklist' },
@@ -1388,9 +1437,12 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         }
     };
 
+    // Desktop drag handlers
     const handleDragStart = (e, index) => {
         setDraggedItem(index);
-        e.dataTransfer.effectAllowed = 'move';
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+        }
     };
 
     const handleDragOver = (e, index) => {
@@ -1403,6 +1455,42 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     const handleDragEnd = () => {
         setDraggedItem(null);
+        setTouchStart(null);
+        setTouchCurrent(null);
+    };
+
+    // Touch handlers for mobile (iOS)
+    const handleTouchStart = (e, index) => {
+        const touch = e.touches[0];
+        setTouchStart({ x: touch.clientX, y: touch.clientY, index });
+        setDraggedItem(index);
+    };
+
+    const handleTouchMove = (e, index) => {
+        if (touchStart === null) return;
+        
+        const touch = e.touches[0];
+        setTouchCurrent({ x: touch.clientX, y: touch.clientY });
+        
+        // Calculate which item we're over
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (element) {
+            const itemElement = element.closest('[data-item-index]');
+            if (itemElement) {
+                const newIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                if (newIndex !== draggedItem && newIndex !== null && !isNaN(newIndex)) {
+                    reorderItems(draggedItem, newIndex);
+                    setDraggedItem(newIndex);
+                    setTouchStart({ ...touchStart, index: newIndex });
+                }
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setDraggedItem(null);
+        setTouchStart(null);
+        setTouchCurrent(null);
     };
 
     return (
@@ -1461,10 +1549,14 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                 {data.lists[activeList].map((item, index) => (
                     <div
                         key={item.id}
+                        data-item-index={index}
                         draggable
                         onDragStart={(e) => handleDragStart(e, index)}
                         onDragOver={(e) => handleDragOver(e, index)}
                         onDragEnd={handleDragEnd}
+                        onTouchStart={(e) => handleTouchStart(e, index)}
+                        onTouchMove={(e) => handleTouchMove(e, index)}
+                        onTouchEnd={handleTouchEnd}
                         className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
                             draggedItem === index ? 'opacity-50' : ''
                         }`}

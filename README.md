@@ -57,7 +57,7 @@ Two reference checklists that stay visible:
 2. **Annual Jobs** - Seasonal maintenance reminders by month
 
 All lists support:
-- Drag-and-drop reordering
+- Drag-and-drop reordering (works on desktop and mobile/iOS)
 - Section headers for organization
 - Completion status tracking
 
