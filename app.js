@@ -1255,9 +1255,10 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     // Mobile touch handlers - DRAG HANDLE ONLY (simple & reliable!)
     const handleDragHandleTouchStart = (e, index) => {
-        e.stopPropagation(); // Don't let this bubble to item
+        // Prevent default to stop scrolling
+        e.preventDefault();
         
-        // Start drag immediately when touching handle - no long press!
+        // Start drag immediately when touching handle
         draggedRef.current = index;
         setDraggedItem(index);
         setIsDragging(true);
@@ -1266,54 +1267,46 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         if (window.navigator.vibrate) {
             window.navigator.vibrate(50);
         }
-    };
-
-    // Attach document-level touch handlers when dragging
-    useEffect(() => {
-        if (!isDragging) return;
         
-        const handleDocumentTouchMove = (e) => {
-            if (isDragging && draggedRef.current !== null) {
-                // Prevent scrolling while dragging
-                if (e.cancelable) {
-                    e.preventDefault();
-                }
-                
-                const touch = e.touches[0];
-                const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                
-                if (element) {
-                    const itemElement = element.closest('[data-item-index]');
-                    if (itemElement) {
-                        const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                        
-                        if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
-                            reorderItems(draggedRef.current, hoverIndex);
-                            draggedRef.current = hoverIndex;
-                        }
+        // Attach touch handlers to the handle element
+        const handleElement = e.currentTarget;
+        
+        const handleTouchMove = (moveEvent) => {
+            // Prevent scrolling while dragging
+            moveEvent.preventDefault();
+            
+            const touch = moveEvent.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (element) {
+                const itemElement = element.closest('[data-item-index]');
+                if (itemElement) {
+                    const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                    
+                    if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
+                        reorderItems(draggedRef.current, hoverIndex);
+                        draggedRef.current = hoverIndex;
                     }
                 }
             }
         };
         
-        const handleDocumentTouchEnd = (e) => {
-            if (isDragging) {
-                draggedRef.current = null;
-                setDraggedItem(null);
-                setIsDragging(false);
-            }
+        const handleTouchEnd = () => {
+            draggedRef.current = null;
+            setDraggedItem(null);
+            setIsDragging(false);
+            
+            // Remove listeners
+            handleElement.removeEventListener('touchmove', handleTouchMove);
+            handleElement.removeEventListener('touchend', handleTouchEnd);
+            handleElement.removeEventListener('touchcancel', handleTouchEnd);
         };
         
-        document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
-        document.addEventListener('touchend', handleDocumentTouchEnd);
-        document.addEventListener('touchcancel', handleDocumentTouchEnd);
-        
-        return () => {
-            document.removeEventListener('touchmove', handleDocumentTouchMove);
-            document.removeEventListener('touchend', handleDocumentTouchEnd);
-            document.removeEventListener('touchcancel', handleDocumentTouchEnd);
-        };
-    }, [isDragging]);
+        // Add listeners to the handle element
+        handleElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+        handleElement.addEventListener('touchend', handleTouchEnd);
+        handleElement.addEventListener('touchcancel', handleTouchEnd);
+    };
 
     // Cleanup on unmount (when switching tabs)
     useEffect(() => {
@@ -1735,9 +1728,10 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     // Mobile touch handlers - DRAG HANDLE ONLY (simple & reliable!)
     const handleDragHandleTouchStart = (e, index) => {
-        e.stopPropagation(); // Don't let this bubble to item
+        // Prevent default to stop scrolling
+        e.preventDefault();
         
-        // Start drag immediately when touching handle - no long press!
+        // Start drag immediately when touching handle
         draggedRef.current = index;
         setDraggedItem(index);
         setIsDragging(true);
@@ -1746,54 +1740,46 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         if (window.navigator.vibrate) {
             window.navigator.vibrate(50);
         }
-    };
-
-    // Attach document-level touch handlers when dragging
-    useEffect(() => {
-        if (!isDragging) return;
         
-        const handleDocumentTouchMove = (e) => {
-            if (isDragging && draggedRef.current !== null) {
-                // Prevent scrolling while dragging
-                if (e.cancelable) {
-                    e.preventDefault();
-                }
-                
-                const touch = e.touches[0];
-                const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                
-                if (element) {
-                    const itemElement = element.closest('[data-item-index]');
-                    if (itemElement) {
-                        const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                        
-                        if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
-                            reorderItems(draggedRef.current, hoverIndex);
-                            draggedRef.current = hoverIndex;
-                        }
+        // Attach touch handlers to the handle element
+        const handleElement = e.currentTarget;
+        
+        const handleTouchMove = (moveEvent) => {
+            // Prevent scrolling while dragging
+            moveEvent.preventDefault();
+            
+            const touch = moveEvent.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (element) {
+                const itemElement = element.closest('[data-item-index]');
+                if (itemElement) {
+                    const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                    
+                    if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
+                        reorderItems(draggedRef.current, hoverIndex);
+                        draggedRef.current = hoverIndex;
                     }
                 }
             }
         };
         
-        const handleDocumentTouchEnd = (e) => {
-            if (isDragging) {
-                draggedRef.current = null;
-                setDraggedItem(null);
-                setIsDragging(false);
-            }
+        const handleTouchEnd = () => {
+            draggedRef.current = null;
+            setDraggedItem(null);
+            setIsDragging(false);
+            
+            // Remove listeners
+            handleElement.removeEventListener('touchmove', handleTouchMove);
+            handleElement.removeEventListener('touchend', handleTouchEnd);
+            handleElement.removeEventListener('touchcancel', handleTouchEnd);
         };
         
-        document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
-        document.addEventListener('touchend', handleDocumentTouchEnd);
-        document.addEventListener('touchcancel', handleDocumentTouchEnd);
-        
-        return () => {
-            document.removeEventListener('touchmove', handleDocumentTouchMove);
-            document.removeEventListener('touchend', handleDocumentTouchEnd);
-            document.removeEventListener('touchcancel', handleDocumentTouchEnd);
-        };
-    }, [isDragging]);
+        // Add listeners to the handle element
+        handleElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+        handleElement.addEventListener('touchend', handleTouchEnd);
+        handleElement.addEventListener('touchcancel', handleTouchEnd);
+    };
 
     // Cleanup on unmount (when switching tabs)
     useEffect(() => {
