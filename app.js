@@ -1514,10 +1514,20 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const downloadDocument = (doc) => {
-        const link = document.createElement('a');
-        link.href = doc.data;
-        link.download = doc.name;
-        link.click();
+        // iOS Safari doesn't support download attribute well
+        // Open in new tab for iOS, download for others
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        
+        if (isIOS) {
+            // For iOS, open in new tab
+            window.open(doc.data, '_blank');
+        } else {
+            // For other platforms, trigger download
+            const link = document.createElement('a');
+            link.href = doc.data;
+            link.download = doc.name;
+            link.click();
+        }
     };
 
     const updateDocCategory = async (id, newCategory) => {
