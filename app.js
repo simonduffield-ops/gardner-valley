@@ -1157,8 +1157,14 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setTouchCurrent(null);
     };
 
-    // Touch handlers for mobile (iOS)
+    // Touch handlers for mobile (iOS) - ListsView
     const handleTouchStart = (e, index) => {
+        // Only allow dragging from the handle
+        const target = e.target;
+        const handle = target.closest('.drag-handle');
+        if (!handle) return;
+        
+        e.preventDefault(); // Prevent scrolling
         const touch = e.touches[0];
         setTouchStart({ x: touch.clientX, y: touch.clientY, index });
         setDraggedItem(index);
@@ -1167,6 +1173,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const handleTouchMove = (e, index) => {
         if (touchStart === null) return;
         
+        e.preventDefault(); // Prevent scrolling while dragging
         const touch = e.touches[0];
         setTouchCurrent({ x: touch.clientX, y: touch.clientY });
         
@@ -1281,7 +1288,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 draggedItem === index ? 'opacity-50' : ''
                             }`}
                         >
-                            <div className="text-gray-400 cursor-grab active:cursor-grabbing">
+                            <div className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                 </svg>
@@ -1315,7 +1322,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 draggedItem === index ? 'opacity-50' : ''
                             }`}
                         >
-                            <div className="text-gray-400 cursor-grab active:cursor-grabbing">
+                            <div className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                 </svg>
@@ -1529,8 +1536,14 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setTouchCurrent(null);
     };
 
-    // Touch handlers for mobile (iOS)
+    // Touch handlers for mobile (iOS) - ReferenceListsView
     const handleTouchStart = (e, index) => {
+        // Only allow dragging from the handle
+        const target = e.target;
+        const handle = target.closest('.drag-handle');
+        if (!handle) return;
+        
+        e.preventDefault(); // Prevent scrolling
         const touch = e.touches[0];
         setTouchStart({ x: touch.clientX, y: touch.clientY, index });
         setDraggedItem(index);
@@ -1539,6 +1552,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const handleTouchMove = (e, index) => {
         if (touchStart === null) return;
         
+        e.preventDefault(); // Prevent scrolling while dragging
         const touch = e.touches[0];
         setTouchCurrent({ x: touch.clientX, y: touch.clientY });
         
@@ -1631,7 +1645,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                             draggedItem === index ? 'opacity-50' : ''
                         }`}
                     >
-                        <div className="text-gray-400 cursor-grab active:cursor-grabbing">
+                        <div className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                             </svg>
