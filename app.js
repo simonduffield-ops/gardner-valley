@@ -1104,35 +1104,32 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const [removed] = items.splice(startIndex, 1);
         items.splice(endIndex, 0, removed);
 
+        // Optimistic update - UI updates immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: items,
+            },
+        });
+
         if (useBackend) {
-            // Update all items with new order
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: items,
-                },
-            });
+            // Only update items whose positions actually changed
+            // This is much more efficient than updating all items
+            const start = Math.min(startIndex, endIndex);
+            const end = Math.max(startIndex, endIndex);
+            const itemsToUpdate = items.slice(start, end + 1);
             
-            // Update order in backend for all items
             try {
                 await Promise.all(
-                    items.map((item, index) => 
-                        propertyAPI.updateListItem(item.id, { sort_order: index })
+                    itemsToUpdate.map((item, idx) => 
+                        propertyAPI.updateListItem(item.id, { sort_order: start + idx })
                     )
                 );
             } catch (error) {
                 console.error('Error reordering items:', error);
                 showToast('Failed to save order', 'error');
             }
-        } else {
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: items,
-                },
-            });
         }
     };
 
@@ -1531,33 +1528,32 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         const [removed] = items.splice(startIndex, 1);
         items.splice(endIndex, 0, removed);
 
+        // Optimistic update - UI updates immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: items,
+            },
+        });
+
         if (useBackend) {
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: items,
-                },
-            });
+            // Only update items whose positions actually changed
+            // This is much more efficient than updating all items
+            const start = Math.min(startIndex, endIndex);
+            const end = Math.max(startIndex, endIndex);
+            const itemsToUpdate = items.slice(start, end + 1);
             
             try {
                 await Promise.all(
-                    items.map((item, index) => 
-                        propertyAPI.updateListItem(item.id, { sort_order: index })
+                    itemsToUpdate.map((item, idx) => 
+                        propertyAPI.updateListItem(item.id, { sort_order: start + idx })
                     )
                 );
             } catch (error) {
                 console.error('Error reordering items:', error);
                 showToast('Failed to save order', 'error');
             }
-        } else {
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: items,
-                },
-            });
         }
     };
 
