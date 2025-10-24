@@ -655,7 +655,7 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
                         width: '100%',
                         height: '100%',
                         backgroundImage: 'url(gardner-valley-map.png)',
-                        backgroundSize: 'contain',
+                        backgroundSize: window.innerWidth < 768 ? 'auto 100%' : 'contain',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat',
                         transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
