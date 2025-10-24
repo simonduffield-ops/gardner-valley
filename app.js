@@ -846,8 +846,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
-        { id: 'projects', label: 'Projects' },
         { id: 'tasks', label: 'Tasks' },
+        { id: 'projects', label: 'Projects' },
         { id: 'thingsToBuy', label: 'Things to Buy' },
     ];
 
