@@ -322,42 +322,109 @@ const initialData = {
 
 function PropertyManager() {
     const [activeTab, setActiveTab] = useState('map');
-    const [data, setData] = useState(() => {
-        try {
-            const saved = localStorage.getItem('propertyData');
-            return saved ? JSON.parse(saved) : initialData;
-        } catch (e) {
-            console.error('Error loading data:', e);
-            return initialData;
-        }
-    });
+    const [data, setData] = useState(initialData);
     const [toast, setToast] = useState(null);
+    const [useBackend, setUseBackend] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
 
-    // Debounced save to localStorage
-    const debouncedSave = useCallback(
-        debounce((dataToSave) => {
+    // Initialize - check for Supabase and load data
+    useEffect(() => {
+        async function initializeData() {
+            setLoading(true);
+            
+            // Try to initialize Supabase
+            const backendAvailable = isSupabaseConfigured();
+            
+            if (backendAvailable) {
+                try {
+                    await propertyAPI.initialize();
+                    console.log('Backend initialized, loading from Supabase...');
+                    
+                    // Load all data from backend
+                    const backendData = await propertyAPI.getAllData();
+                    setData(backendData);
+                    setUseBackend(true);
+                    console.log('Data loaded from backend:', backendData);
+                } catch (error) {
+                    console.error('Failed to load from backend, falling back to localStorage:', error);
+                    setUseBackend(false);
+                    loadFromLocalStorage();
+                }
+            } else {
+                console.log('Backend not configured, using localStorage');
+                setUseBackend(false);
+                loadFromLocalStorage();
+            }
+            
+            setLoading(false);
+        }
+
+        function loadFromLocalStorage() {
             try {
-                const storageCheck = checkStorageSpace(dataToSave);
-                if (storageCheck.success) {
-                    localStorage.setItem('propertyData', JSON.stringify(dataToSave));
-                } else {
-                    setToast({ message: storageCheck.error, type: 'error' });
+                const saved = localStorage.getItem('propertyData');
+                if (saved) {
+                    setData(JSON.parse(saved));
                 }
             } catch (e) {
-                console.error('Error saving data:', e);
-                setToast({ message: 'Failed to save data. Please try again.', type: 'error' });
+                console.error('Error loading from localStorage:', e);
+            }
+        }
+
+        initializeData();
+    }, []);
+
+    // Save to localStorage (fallback and cache)
+    const debouncedSave = useCallback(
+        debounce((dataToSave) => {
+            if (!useBackend) {
+                try {
+                    const storageCheck = checkStorageSpace(dataToSave);
+                    if (storageCheck.success) {
+                        localStorage.setItem('propertyData', JSON.stringify(dataToSave));
+                    } else {
+                        setToast({ message: storageCheck.error, type: 'error' });
+                    }
+                } catch (e) {
+                    console.error('Error saving data:', e);
+                    setToast({ message: 'Failed to save data. Please try again.', type: 'error' });
+                }
             }
         }, 500),
-        []
+        [useBackend]
     );
 
     useEffect(() => {
-        debouncedSave(data);
-    }, [data, debouncedSave]);
+        if (!loading) {
+            debouncedSave(data);
+        }
+    }, [data, debouncedSave, loading]);
 
     const showToast = useCallback((message, type = 'success') => {
         setToast({ message, type });
     }, []);
+
+    // Helper function to update data with backend sync
+    const updateData = useCallback(async (updateFn) => {
+        if (useBackend) {
+            setSyncing(true);
+        }
+        try {
+            await updateFn();
+            if (useBackend) {
+                // Reload data from backend to ensure consistency
+                const backendData = await propertyAPI.getAllData();
+                setData(backendData);
+            }
+        } catch (error) {
+            console.error('Error updating data:', error);
+            showToast('Failed to sync data. Please try again.', 'error');
+        } finally {
+            if (useBackend) {
+                setSyncing(false);
+            }
+        }
+    }, [useBackend, showToast]);
 
     // Export data function
     const exportData = () => {
@@ -413,8 +480,33 @@ function PropertyManager() {
         { id: 'documents', label: 'Docs', icon: Icons.Document },
     ];
 
+    // Show loading screen while initializing
+    if (loading) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-gradient-to-br from-emerald-500 to-teal-500">
+                <div className="text-center text-white">
+                    <div className="text-6xl mb-4">🏡</div>
+                    <h2 className="text-2xl font-bold mb-2">Gardner Valley</h2>
+                    <p className="animate-pulse">Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="h-screen flex flex-col bg-gray-50">
+            {/* Sync status indicator */}
+            {syncing && (
+                <div className="fixed top-4 left-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm flex items-center gap-2">
+                    <div className="animate-spin">⟳</div>
+                    <span>Syncing...</span>
+                </div>
+            )}
+            {useBackend && !syncing && (
+                <div className="fixed top-4 left-4 bg-emerald-600 text-white px-3 py-1 rounded-lg shadow text-xs z-40">
+                    ☁️ Backend Active
+                </div>
+            )}
             {/* Header with Export/Import */}
             <header className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-4 shadow-lg">
                 <div className="flex justify-between items-center">
@@ -452,11 +544,11 @@ function PropertyManager() {
 
             {/* Content */}
             <main className="flex-1 overflow-y-auto pb-20">
-                {activeTab === 'map' && <MapView data={data} setData={setData} showToast={showToast} />}
-                {activeTab === 'info' && <InfoView data={data} setData={setData} showToast={showToast} />}
-                {activeTab === 'lists' && <ListsView data={data} setData={setData} showToast={showToast} />}
-                {activeTab === 'calendar' && <CalendarView data={data} setData={setData} showToast={showToast} />}
-                {activeTab === 'documents' && <DocumentsView data={data} setData={setData} showToast={showToast} />}
+                {activeTab === 'map' && <MapView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'info' && <InfoView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'lists' && <ListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'calendar' && <CalendarView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'documents' && <DocumentsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
             </main>
 
             {/* Bottom Navigation */}
@@ -491,7 +583,7 @@ function PropertyManager() {
     );
 }
 
-function MapView({ data, setData, showToast }) {
+function MapView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddMarker, setShowAddMarker] = useState(false);
     const [newMarker, setNewMarker] = useState({ x: 50, y: 50, label: '', type: 'tree' });
     const [confirmDelete, setConfirmDelete] = useState(null);
@@ -513,23 +605,38 @@ function MapView({ data, setData, showToast }) {
         setNewMarker({ ...newMarker, x, y });
     };
 
-    const addMarker = () => {
+    const addMarker = async () => {
         if (!newMarker.label) return;
-        const marker = {
-            id: generateId(),
-            ...newMarker,
-        };
-        setData({ ...data, mapMarkers: [...data.mapMarkers, marker] });
+        
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.addMapMarker(newMarker);
+            });
+        } else {
+            const marker = {
+                id: generateId(),
+                ...newMarker,
+            };
+            setData({ ...data, mapMarkers: [...data.mapMarkers, marker] });
+        }
+        
         setNewMarker({ x: 50, y: 50, label: '', type: 'tree' });
         setShowAddMarker(false);
         showToast('Marker added successfully!');
     };
 
-    const deleteMarker = (id) => {
-        setData({
-            ...data,
-            mapMarkers: data.mapMarkers.filter(m => m.id !== id),
-        });
+    const deleteMarker = async (id) => {
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.deleteMapMarker(id);
+            });
+        } else {
+            setData({
+                ...data,
+                mapMarkers: data.mapMarkers.filter(m => m.id !== id),
+            });
+        }
+        
         setConfirmDelete(null);
         showToast('Marker deleted');
     };
@@ -635,7 +742,7 @@ function MapView({ data, setData, showToast }) {
     );
 }
 
-function InfoView({ data, setData, showToast }) {
+function InfoView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddContact, setShowAddContact] = useState(false);
     const [newContact, setNewContact] = useState({ category: 'Utilities', name: '', value: '' });
     const [editingId, setEditingId] = useState(null);
@@ -821,7 +928,7 @@ function InfoView({ data, setData, showToast }) {
     );
 }
 
-function ListsView({ data, setData, showToast }) {
+function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [activeList, setActiveList] = useState('leaving');
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
@@ -982,7 +1089,7 @@ function ListsView({ data, setData, showToast }) {
     );
 }
 
-function CalendarView({ data, setData, showToast }) {
+function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddBooking, setShowAddBooking] = useState(false);
     const [newBooking, setNewBooking] = useState({
         startDate: '',
@@ -991,31 +1098,44 @@ function CalendarView({ data, setData, showToast }) {
     });
     const [confirmDelete, setConfirmDelete] = useState(null);
 
-    const addBooking = () => {
+    const addBooking = async () => {
         if (!newBooking.startDate || !newBooking.endDate || !newBooking.guest) return;
         
-        const booking = {
-            id: generateId(),
-            ...newBooking,
-        };
-        
-        setData({
-            ...data,
-            calendar: [...data.calendar, booking].sort((a, b) =>
-                new Date(a.startDate) - new Date(b.startDate)
-            ),
-        });
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.addCalendarBooking(newBooking);
+            });
+        } else {
+            const booking = {
+                id: generateId(),
+                ...newBooking,
+            };
+            
+            setData({
+                ...data,
+                calendar: [...data.calendar, booking].sort((a, b) =>
+                    new Date(a.startDate) - new Date(b.startDate)
+                ),
+            });
+        }
         
         setNewBooking({ startDate: '', endDate: '', guest: '' });
         setShowAddBooking(false);
         showToast('Booking added successfully!');
     };
 
-    const deleteBooking = (id) => {
-        setData({
-            ...data,
-            calendar: data.calendar.filter(b => b.id !== id),
-        });
+    const deleteBooking = async (id) => {
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.deleteCalendarBooking(id);
+            });
+        } else {
+            setData({
+                ...data,
+                calendar: data.calendar.filter(b => b.id !== id),
+            });
+        }
+        
         setConfirmDelete(null);
         showToast('Booking deleted');
     };
@@ -1145,7 +1265,7 @@ function CalendarView({ data, setData, showToast }) {
     );
 }
 
-function DocumentsView({ data, setData, showToast }) {
+function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
     const [showUpload, setShowUpload] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [viewingDoc, setViewingDoc] = useState(null);
