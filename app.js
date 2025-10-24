@@ -926,6 +926,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [draggedItem, setDraggedItem] = useState(null);
     const [showAddSection, setShowAddSection] = useState(false);
     const [newSectionName, setNewSectionName] = useState('');
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchCurrent, setTouchCurrent] = useState(null);
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
