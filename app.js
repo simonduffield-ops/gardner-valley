@@ -1154,6 +1154,9 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     // Long press handlers for mobile drag on entire item
     const handleLongPressStart = (e, index) => {
+        // Prevent text selection
+        e.preventDefault();
+        
         longPressTimer.current = setTimeout(() => {
             draggedRef.current = index;
             setDraggedItem(index);
@@ -1162,7 +1165,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             if (window.navigator.vibrate) {
                 window.navigator.vibrate(50);
             }
-        }, 500); // 500ms long press
+        }, 400); // 400ms long press (slightly faster)
     };
 
     const handleLongPressEnd = () => {
@@ -1170,7 +1173,11 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const handleTouchMove = (e) => {
-        if (!isDragging || draggedRef.current === null) return;
+        if (!isDragging || draggedRef.current === null) {
+            // Cancel long press if user starts scrolling
+            clearTimeout(longPressTimer.current);
+            return;
+        }
         
         e.preventDefault();
         
@@ -1197,17 +1204,24 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setIsDragging(false);
     };
 
-    // Arrow buttons as fallback
-    const moveItemUp = async (index) => {
-        if (index === 0) return;
-        await reorderItems(index, index - 1);
-        showToast('Item moved up');
+    // Desktop drag handlers
+    const handleDesktopDragStart = (e, index) => {
+        setDraggedItem(index);
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+        }
     };
 
-    const moveItemDown = async (index) => {
-        if (index === data.lists[activeList].length - 1) return;
-        await reorderItems(index, index + 1);
-        showToast('Item moved down');
+    const handleDesktopDragOver = (e, index) => {
+        e.preventDefault();
+        if (draggedItem === null || draggedItem === index) return;
+        
+        reorderItems(draggedItem, index);
+        setDraggedItem(index);
+    };
+
+    const handleDesktopDragEnd = () => {
+        setDraggedItem(null);
     };
 
     return (
@@ -1299,33 +1313,26 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         <div
                             key={item.id}
                             data-item-index={index}
+                            draggable
+                            onDragStart={(e) => handleDesktopDragStart(e, index)}
+                            onDragOver={(e) => handleDesktopDragOver(e, index)}
+                            onDragEnd={handleDesktopDragEnd}
                             onTouchStart={(e) => handleLongPressStart(e, index)}
                             onTouchEnd={handleLongPressEnd}
-                            className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-2 transition-all ${
+                            className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all select-none ${
                                 draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
+                            style={{
+                                cursor: draggedItem === index ? 'grabbing' : 'grab',
+                                WebkitUserSelect: 'none',
+                                userSelect: 'none',
+                                touchAction: 'none'
+                            }}
                         >
-                            <div className="flex flex-col gap-1">
-                                <button
-                                    onClick={() => moveItemUp(index)}
-                                    disabled={index === 0}
-                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
-                                    title="Move up"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => moveItemDown(index)}
-                                    disabled={index === data.lists[activeList].length - 1}
-                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
-                                    title="Move down"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
+                            <div className="text-gray-400">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                </svg>
                             </div>
                             <div className="flex-1 flex items-center gap-2">
                                 <span className="text-emerald-600 text-lg">📑</span>
@@ -1345,33 +1352,26 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         <div
                             key={item.id}
                             data-item-index={index}
+                            draggable
+                            onDragStart={(e) => handleDesktopDragStart(e, index)}
+                            onDragOver={(e) => handleDesktopDragOver(e, index)}
+                            onDragEnd={handleDesktopDragEnd}
                             onTouchStart={(e) => handleLongPressStart(e, index)}
                             onTouchEnd={handleLongPressEnd}
-                            className={`bg-white p-4 rounded-lg shadow flex items-center gap-2 transition-all ${
+                            className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
                                 draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
+                            style={{
+                                cursor: draggedItem === index ? 'grabbing' : 'grab',
+                                WebkitUserSelect: 'none',
+                                userSelect: 'none',
+                                touchAction: 'none'
+                            }}
                         >
-                            <div className="flex flex-col gap-1">
-                                <button
-                                    onClick={() => moveItemUp(index)}
-                                    disabled={index === 0}
-                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
-                                    title="Move up"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => moveItemDown(index)}
-                                    disabled={index === data.lists[activeList].length - 1}
-                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
-                                    title="Move down"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
+                            <div className="text-gray-400">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                </svg>
                             </div>
                             <button
                                 onClick={() => toggleItem(item.id)}
@@ -1579,6 +1579,9 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     // Long press handlers for mobile drag on entire item
     const handleLongPressStart = (e, index) => {
+        // Prevent text selection
+        e.preventDefault();
+        
         longPressTimer.current = setTimeout(() => {
             draggedRef.current = index;
             setDraggedItem(index);
@@ -1586,7 +1589,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             if (window.navigator.vibrate) {
                 window.navigator.vibrate(50);
             }
-        }, 500);
+        }, 400); // 400ms long press (slightly faster)
     };
 
     const handleLongPressEnd = () => {
@@ -1594,7 +1597,11 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     };
 
     const handleTouchMove = (e) => {
-        if (!isDragging || draggedRef.current === null) return;
+        if (!isDragging || draggedRef.current === null) {
+            // Cancel long press if user starts scrolling
+            clearTimeout(longPressTimer.current);
+            return;
+        }
         
         e.preventDefault();
         
@@ -1621,17 +1628,24 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setIsDragging(false);
     };
 
-    // Arrow buttons as fallback
-    const moveItemUp = async (index) => {
-        if (index === 0) return;
-        await reorderItems(index, index - 1);
-        showToast('Item moved up');
+    // Desktop drag handlers
+    const handleDesktopDragStart = (e, index) => {
+        setDraggedItem(index);
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+        }
     };
 
-    const moveItemDown = async (index) => {
-        if (index === data.lists[activeList].length - 1) return;
-        await reorderItems(index, index + 1);
-        showToast('Item moved down');
+    const handleDesktopDragOver = (e, index) => {
+        e.preventDefault();
+        if (draggedItem === null || draggedItem === index) return;
+        
+        reorderItems(draggedItem, index);
+        setDraggedItem(index);
+    };
+
+    const handleDesktopDragEnd = () => {
+        setDraggedItem(null);
     };
 
     return (
@@ -1691,33 +1705,26 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     <div
                         key={item.id}
                         data-item-index={index}
+                        draggable
+                        onDragStart={(e) => handleDesktopDragStart(e, index)}
+                        onDragOver={(e) => handleDesktopDragOver(e, index)}
+                        onDragEnd={handleDesktopDragEnd}
                         onTouchStart={(e) => handleLongPressStart(e, index)}
                         onTouchEnd={handleLongPressEnd}
-                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-2 transition-all ${
+                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
                             draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                         }`}
+                        style={{
+                            cursor: draggedItem === index ? 'grabbing' : 'grab',
+                            WebkitUserSelect: 'none',
+                            userSelect: 'none',
+                            touchAction: 'none'
+                        }}
                     >
-                        <div className="flex flex-col gap-1">
-                            <button
-                                onClick={() => moveItemUp(index)}
-                                disabled={index === 0}
-                                className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
-                                title="Move up"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                </svg>
-                            </button>
-                            <button
-                                onClick={() => moveItemDown(index)}
-                                disabled={index === data.lists[activeList].length - 1}
-                                className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
-                                title="Move down"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
+                        <div className="text-gray-400">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                            </svg>
                         </div>
                         <button
                             onClick={() => toggleItem(item.id)}
