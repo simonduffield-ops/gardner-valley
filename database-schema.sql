@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS list_items (
     text TEXT NOT NULL,
     checked BOOLEAN DEFAULT FALSE,
     completed BOOLEAN DEFAULT FALSE,
+    is_section BOOLEAN DEFAULT FALSE, -- TRUE for section headers, FALSE for regular items
     month TEXT,
     sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

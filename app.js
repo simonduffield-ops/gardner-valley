@@ -924,6 +924,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
+    const [showAddSection, setShowAddSection] = useState(false);
+    const [newSectionName, setNewSectionName] = useState('');
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
@@ -938,6 +940,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const newItem = {
             text: newItemText,
             completed: false,
+            is_section: false,
         };
         
         if (useBackend) {
@@ -957,6 +960,35 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         
         setNewItemText('');
         showToast('Item added!');
+    };
+
+    const addSection = async () => {
+        if (!newSectionName.trim()) return;
+        
+        const newSection = {
+            text: newSectionName,
+            is_section: true,
+            completed: false,
+        };
+        
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.addListItem(activeList, newSection);
+            });
+        } else {
+            newSection.id = generateId();
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: [...data.lists[activeList], newSection],
+                },
+            });
+        }
+        
+        setNewSectionName('');
+        setShowAddSection(false);
+        showToast('Section added!');
     };
 
     const toggleItem = async (id) => {
@@ -1078,7 +1110,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
             {/* Add Item */}
             <div className="bg-white p-4 rounded-lg shadow mb-4">
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-2">
                     <input
                         type="text"
                         placeholder={`Add to ${listTypes.find(t => t.id === activeList)?.label}`}
@@ -1095,54 +1127,109 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         <Icons.Plus />
                     </button>
                 </div>
+                <button
+                    onClick={() => setShowAddSection(!showAddSection)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                    {showAddSection ? '− Cancel' : '+ Add Section'}
+                </button>
+                {showAddSection && (
+                    <div className="flex gap-2 mt-2 pt-2 border-t">
+                        <input
+                            type="text"
+                            placeholder="Section name (e.g., 'Produce', 'Dairy')"
+                            value={newSectionName}
+                            onChange={(e) => setNewSectionName(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && addSection()}
+                            className="flex-1 p-2 border rounded text-sm"
+                        />
+                        <button
+                            onClick={addSection}
+                            disabled={!newSectionName.trim()}
+                            className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-300 text-sm"
+                        >
+                            Add
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Items */}
             <div className="space-y-2">
                 {data.lists[activeList].map((item, index) => (
-                    <div
-                        key={item.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, index)}
-                        onDragOver={(e) => handleDragOver(e, index)}
-                        onDragEnd={handleDragEnd}
-                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
-                            draggedItem === index ? 'opacity-50' : ''
-                        }`}
-                    >
-                        <div className="text-gray-400 cursor-grab active:cursor-grabbing">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                            </svg>
+                    item.is_section ? (
+                        // Section Header
+                        <div
+                            key={item.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDragEnd={handleDragEnd}
+                            className={`bg-gradient-to-r from-gray-100 to-gray-50 p-3 rounded-lg flex items-center gap-3 cursor-move active:opacity-50 transition-opacity border-l-4 border-emerald-500 ${
+                                draggedItem === index ? 'opacity-50' : ''
+                            }`}
+                        >
+                            <div className="text-gray-400 cursor-grab active:cursor-grabbing">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                </svg>
+                            </div>
+                            <span className="flex-1 font-bold text-gray-700 uppercase text-sm tracking-wide">
+                                {item.text}
+                            </span>
+                            <button
+                                onClick={() => setConfirmDelete(item.id)}
+                                className="text-red-500 p-1 hover:bg-red-50 rounded"
+                            >
+                                <Icons.Trash />
+                            </button>
                         </div>
-                        <button
-                            onClick={() => toggleItem(item.id)}
-                            className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                                item.completed
-                                    ? 'bg-emerald-500 border-emerald-500'
-                                    : 'border-gray-300'
+                    ) : (
+                        // Regular Item
+                        <div
+                            key={item.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDragEnd={handleDragEnd}
+                            className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
+                                draggedItem === index ? 'opacity-50' : ''
                             }`}
                         >
-                            {item.completed && (
-                                <Icons.Check />
-                            )}
-                        </button>
-                        <span
-                            className={`flex-1 ${
-                                item.completed
-                                    ? 'line-through text-gray-400'
-                                    : 'text-gray-800'
-                            }`}
-                        >
-                            {item.text}
-                        </span>
-                        <button
-                            onClick={() => setConfirmDelete(item.id)}
-                            className="text-red-500 p-1"
-                        >
-                            <Icons.Trash />
-                        </button>
-                    </div>
+                            <div className="text-gray-400 cursor-grab active:cursor-grabbing">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                </svg>
+                            </div>
+                            <button
+                                onClick={() => toggleItem(item.id)}
+                                className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                                    item.completed
+                                        ? 'bg-emerald-500 border-emerald-500'
+                                        : 'border-gray-300'
+                                }`}
+                            >
+                                {item.completed && (
+                                    <Icons.Check />
+                                )}
+                            </button>
+                            <span
+                                className={`flex-1 ${
+                                    item.completed
+                                        ? 'line-through text-gray-400'
+                                        : 'text-gray-800'
+                                }`}
+                            >
+                                {item.text}
+                            </span>
+                            <button
+                                onClick={() => setConfirmDelete(item.id)}
+                                className="text-red-500 p-1"
+                            >
+                                <Icons.Trash />
+                            </button>
+                        </div>
+                    )
                 ))}
                 {data.lists[activeList].length === 0 && (
                     <div className="text-center text-gray-400 py-8">
