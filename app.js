@@ -989,8 +989,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [draggedItem, setDraggedItem] = useState(null);
     const [showAddSection, setShowAddSection] = useState(false);
     const [newSectionName, setNewSectionName] = useState('');
-    const [touchStart, setTouchStart] = useState(null);
-    const [touchCurrent, setTouchCurrent] = useState(null);
+    const draggedRef = useRef(null);
+    const containerRef = useRef(null);
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
@@ -1158,41 +1158,36 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     // Touch handlers for mobile (iOS) - ListsView
-    const handleTouchStart = (e, index) => {
-        const touch = e.touches[0];
-        setTouchStart({ x: touch.clientX, y: touch.clientY, index });
+    const handleTouchStart = useCallback((e, index) => {
+        draggedRef.current = index;
         setDraggedItem(index);
-    };
+    }, []);
 
-    const handleTouchMove = (e) => {
-        if (touchStart === null || draggedItem === null) return;
+    const handleTouchMove = useCallback((e) => {
+        if (draggedRef.current === null) return;
         
-        e.preventDefault(); // Prevent scrolling while dragging
-        e.stopPropagation(); // Stop event bubbling
+        e.preventDefault();
         
         const touch = e.touches[0];
-        setTouchCurrent({ x: touch.clientX, y: touch.clientY });
-        
-        // Calculate which item we're over
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        
         if (element) {
             const itemElement = element.closest('[data-item-index]');
             if (itemElement) {
-                const newIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                if (newIndex !== draggedItem && newIndex !== null && !isNaN(newIndex)) {
-                    reorderItems(draggedItem, newIndex);
-                    setDraggedItem(newIndex);
-                    setTouchStart({ ...touchStart, index: newIndex });
+                const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                
+                if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
+                    reorderItems(draggedRef.current, hoverIndex);
+                    draggedRef.current = hoverIndex;
                 }
             }
         }
-    };
+    }, [reorderItems]);
 
-    const handleTouchEnd = () => {
+    const handleTouchEnd = useCallback(() => {
+        draggedRef.current = null;
         setDraggedItem(null);
-        setTouchStart(null);
-        setTouchCurrent(null);
-    };
+    }, []);
 
     return (
         <div className="p-4">
@@ -1276,7 +1271,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             </div>
 
             {/* Items */}
-            <div className="space-y-2" onTouchMove={handleTouchMove}>
+            <div ref={containerRef} className="space-y-2" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
                 {data.lists[activeList].map((item, index) => (
                     item.is_section ? (
                         // Section Header
@@ -1294,7 +1289,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             <div 
                                 className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
                                 onTouchStart={(e) => handleTouchStart(e, index)}
-                                onTouchEnd={handleTouchEnd}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
@@ -1329,7 +1323,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             <div 
                                 className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
                                 onTouchStart={(e) => handleTouchStart(e, index)}
-                                onTouchEnd={handleTouchEnd}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
@@ -1389,8 +1382,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
-    const [touchStart, setTouchStart] = useState(null);
-    const [touchCurrent, setTouchCurrent] = useState(null);
+    const draggedRef = useRef(null);
+    const containerRef = useRef(null);
 
     const listTypes = [
         { id: 'leaving', label: 'Leaving Checklist' },
@@ -1545,41 +1538,36 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     };
 
     // Touch handlers for mobile (iOS) - ReferenceListsView
-    const handleTouchStart = (e, index) => {
-        const touch = e.touches[0];
-        setTouchStart({ x: touch.clientX, y: touch.clientY, index });
+    const handleTouchStart = useCallback((e, index) => {
+        draggedRef.current = index;
         setDraggedItem(index);
-    };
+    }, []);
 
-    const handleTouchMove = (e) => {
-        if (touchStart === null || draggedItem === null) return;
+    const handleTouchMove = useCallback((e) => {
+        if (draggedRef.current === null) return;
         
-        e.preventDefault(); // Prevent scrolling while dragging
-        e.stopPropagation(); // Stop event bubbling
+        e.preventDefault();
         
         const touch = e.touches[0];
-        setTouchCurrent({ x: touch.clientX, y: touch.clientY });
-        
-        // Calculate which item we're over
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        
         if (element) {
             const itemElement = element.closest('[data-item-index]');
             if (itemElement) {
-                const newIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                if (newIndex !== draggedItem && newIndex !== null && !isNaN(newIndex)) {
-                    reorderItems(draggedItem, newIndex);
-                    setDraggedItem(newIndex);
-                    setTouchStart({ ...touchStart, index: newIndex });
+                const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                
+                if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
+                    reorderItems(draggedRef.current, hoverIndex);
+                    draggedRef.current = hoverIndex;
                 }
             }
         }
-    };
+    }, [reorderItems]);
 
-    const handleTouchEnd = () => {
+    const handleTouchEnd = useCallback(() => {
+        draggedRef.current = null;
         setDraggedItem(null);
-        setTouchStart(null);
-        setTouchCurrent(null);
-    };
+    }, []);
 
     return (
         <div className="p-4">
@@ -1633,7 +1621,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             </div>
 
             {/* Items - Checkboxes that stay visible */}
-            <div className="space-y-2" onTouchMove={handleTouchMove}>
+            <div ref={containerRef} className="space-y-2" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
                 {data.lists[activeList].map((item, index) => (
                     <div
                         key={item.id}
@@ -1649,7 +1637,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                         <div 
                             className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
                             onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchEnd={handleTouchEnd}
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
