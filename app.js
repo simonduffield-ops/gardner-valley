@@ -1402,19 +1402,19 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
 
     const categories = ['All', 'Manuals', 'Images', 'Warranties', 'Receipts', 'Other'];
 
-    const handleFileUpload = (e) => {
+    const handleFileUpload = async (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
         
         let successCount = 0;
         let errorCount = 0;
 
-        files.forEach((file, index) => {
-            // Limit file size to 5MB to prevent localStorage issues
+        for (const file of files) {
+            // Limit file size to 5MB
             if (file.size > 5 * 1024 * 1024) {
                 showToast(`${file.name} is too large. Maximum size is 5MB.`, 'error');
                 errorCount++;
-                return;
+                continue;
             }
 
             // Validate file type
@@ -1423,55 +1423,58 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
             if (!isValidType && file.type) {
                 showToast(`${file.name} has an unsupported file type.`, 'error');
                 errorCount++;
-                return;
+                continue;
             }
 
-            const reader = new FileReader();
-            
-            reader.onload = (event) => {
-                try {
-                    const doc = {
-                        id: generateId(),
-                        name: file.name,
-                        category: guessCategory(file.type, file.name),
-                        type: file.type,
-                        size: formatFileSize(file.size),
-                        uploadDate: new Date().toISOString().split('T')[0],
-                        data: event.target.result,
-                    };
+            try {
+                const dataUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => resolve(event.target.result);
+                    reader.onerror = (error) => reject(error);
+                    reader.readAsDataURL(file);
+                });
 
+                const doc = {
+                    name: file.name,
+                    category: guessCategory(file.type, file.name),
+                    type: file.type,
+                    size: formatFileSize(file.size),
+                    uploadDate: new Date().toISOString().split('T')[0],
+                    data: dataUrl,
+                };
+
+                if (useBackend) {
+                    await updateData(async () => {
+                        await propertyAPI.addDocument(doc);
+                    });
+                } else {
+                    doc.id = generateId();
                     const newData = {
                         ...data,
                         documents: [...data.documents, doc],
                     };
-
-                    // Check storage space before saving
+                    
                     const storageCheck = checkStorageSpace(newData);
                     if (storageCheck.success) {
                         setData(newData);
-                        successCount++;
-                        if (index === files.length - 1) {
-                            showToast(`${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully!`);
-                        }
                     } else {
                         showToast(storageCheck.error, 'error');
                         errorCount++;
+                        continue;
                     }
-                } catch (error) {
-                    console.error('Error uploading file:', error);
-                    showToast(`Failed to upload ${file.name}`, 'error');
-                    errorCount++;
                 }
-            };
-
-            reader.onerror = (error) => {
-                console.error('File reading error:', error);
-                showToast(`Failed to read ${file.name}`, 'error');
+                
+                successCount++;
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                showToast(`Failed to upload ${file.name}`, 'error');
                 errorCount++;
-            };
+            }
+        }
 
-            reader.readAsDataURL(file);
-        });
+        if (successCount > 0) {
+            showToast(`${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully!`);
+        }
 
         setShowUpload(false);
         if (fileInputRef.current) {
@@ -1493,11 +1496,18 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
 
-    const deleteDocument = (id) => {
-        setData({
-            ...data,
-            documents: data.documents.filter(d => d.id !== id),
-        });
+    const deleteDocument = async (id) => {
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.deleteDocument(id);
+            });
+        } else {
+            setData({
+                ...data,
+                documents: data.documents.filter(d => d.id !== id),
+            });
+        }
+        
         setViewingDoc(null);
         setConfirmDelete(null);
         showToast('Document deleted');
@@ -1510,13 +1520,19 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
         link.click();
     };
 
-    const updateDocCategory = (id, newCategory) => {
-        setData({
-            ...data,
-            documents: data.documents.map(d =>
-                d.id === id ? { ...d, category: newCategory } : d
-            ),
-        });
+    const updateDocCategory = async (id, newCategory) => {
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.updateDocument(id, { category: newCategory });
+            });
+        } else {
+            setData({
+                ...data,
+                documents: data.documents.map(d =>
+                    d.id === id ? { ...d, category: newCategory } : d
+                ),
+            });
+        }
     };
 
     const filteredDocs = selectedCategory === 'All'
