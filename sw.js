@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gardner-valley-v16';
+const CACHE_NAME = 'gardner-valley-v17';
 const urlsToCache = [
     '/gardner-valley/',
     '/gardner-valley/index.html',

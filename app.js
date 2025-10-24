@@ -197,127 +197,20 @@ const Icons = {
 };
 
 // Initial data structure
+// Initial data structure (empty - for new users without backend)
 const initialData = {
-    mapMarkers: [
-        { id: 1, x: 30, y: 20, label: 'Oak Tree', type: 'tree' },
-        { id: 2, x: 70, y: 30, label: 'Main Building', type: 'building' },
-        { id: 3, x: 50, y: 60, label: 'Irrigation Line', type: 'irrigation' },
-        { id: 4, x: 20, y: 80, label: 'Tool Shed', type: 'equipment' },
-    ],
-    contacts: [
-        { id: 1, category: 'Utilities', name: 'Electric Company', value: '555-0100' },
-        { id: 2, category: 'Utilities', name: 'Water District', value: '555-0101' },
-        { id: 3, category: 'Services', name: 'Rubbish Collection', value: 'Put the bin out roadside on any wednesday night and they will pick it up on the Thursday run, and bill us only when they do a pick up.' },
-        { id: 4, category: 'Services', name: 'Recycling', value: 'Wed2 - see calendar', link: 'https://www.tasman.govt.nz/my-property/recycling-and-rubbish/kerbside-collections' },
-        { id: 5, category: 'Other', name: 'WiFi Password', value: '07082025' },
-        { id: 6, category: 'Other', name: 'Lockbox Combo', value: '3698' },
-        { id: 7, category: 'Other', name: 'Gas Delivery', value: '555-0102' },
-    ],
+    mapMarkers: [],
+    contacts: [],
     lists: {
-        leaving: [
-            { id: 1, text: 'Empty rubbish bins', checked: false },
-            { id: 2, text: 'Close curtains', checked: false },
-            { id: 3, text: 'Wash towels and sheets', checked: false },
-            { id: 4, text: 'Turn off appliances - washing machine, dryer, oven, microwave, speaker', checked: false },
-            { id: 5, text: 'Remove perishable food from fridge and pantry', checked: false },
-            { id: 6, text: 'Dishes', checked: false },
-            { id: 7, text: 'Put tools and equipment away appropriately', checked: false },
-            { id: 8, text: 'Vacuum', checked: false },
-            { id: 9, text: 'Make up the beds', checked: false },
-            { id: 10, text: 'Clean bathrooms', checked: false },
-            { id: 11, text: 'Empty the fire box', checked: false },
-            { id: 12, text: 'Mow and weed eat', checked: false },
-            { id: 13, text: 'Water trees', checked: false },
-            { id: 14, text: 'Lock the doors (security poles)', checked: false },
-            { id: 15, text: 'Close windows', checked: false },
-            { id: 16, text: 'Turn off lights', checked: false },
-        ],
-        projects: [
-            { id: 1, text: 'Quote for removing linoleum', completed: false },
-            { id: 2, text: 'Quote for painting downstairs ceiling', completed: false },
-            { id: 3, text: 'Quotes for carpet and lino', completed: false },
-            { id: 4, text: 'Outdoor fire pit', completed: false },
-            { id: 5, text: 'Fruit and nut tree planting plan', completed: false },
-            { id: 6, text: 'Back of property native planting plan', completed: false },
-            { id: 7, text: 'Driveway re-grade and gravel', completed: false },
-            { id: 8, text: 'Re-stain the house', completed: false },
-            { id: 9, text: 'Carpet bug bomb', completed: false },
-            { id: 10, text: 'Repair deck', completed: false },
-            { id: 11, text: 'Vegie garden', completed: false },
-            { id: 12, text: 'Poly tunnel', completed: false },
-            { id: 13, text: 'Fire wood seasoning cover', completed: false },
-            { id: 14, text: 'Fire wood area next to house', completed: false },
-            { id: 15, text: 'Fire wood grove planting plan', completed: false },
-            { id: 16, text: 'Covered outdoor eating area', completed: false },
-            { id: 17, text: 'Built BBQ / Pizza oven', completed: false },
-            { id: 18, text: 'Outdoor bath', completed: false },
-            { id: 19, text: 'Kitchen', completed: false },
-            { id: 20, text: 'Set up wi-fi', completed: false },
-            { id: 21, text: 'Accumulate all property information and documentation', completed: false },
-            { id: 22, text: 'Re-seal windowsills', completed: false },
-            { id: 23, text: 'Sort out downstairs toilet window condensation', completed: false },
-            { id: 24, text: 'Curtains', completed: false },
-            { id: 25, text: 'House garden spruce up', completed: false },
-            { id: 26, text: 'Property Calendar', completed: false },
-            { id: 27, text: 'Restore the pond', completed: false },
-            { id: 28, text: 'Water storage tanks', completed: false },
-            { id: 29, text: 'Rat and mice traps', completed: false },
-            { id: 30, text: 'Sort the garage', completed: false },
-            { id: 31, text: 'Lock up trailer and mower', completed: false },
-            { id: 32, text: 'Security cameras', completed: false },
-            { id: 33, text: 'Nursery area', completed: false },
-            { id: 34, text: 'De-lichen the roof', completed: false },
-            { id: 35, text: 'Fix the stair rail', completed: false },
-            { id: 36, text: 'Laundry / bathroom separation', completed: false },
-            { id: 37, text: 'Get keys cut', completed: false },
-            { id: 38, text: 'Sort the lockup and pole shed', completed: false },
-            { id: 39, text: 'Fix the range hood', completed: false },
-            { id: 40, text: 'Stake the fruit trees', completed: false },
-        ],
-        tasks: [
-            { id: 1, text: 'Mow lawn', completed: false },
-            { id: 2, text: 'Clean gutters', completed: false },
-        ],
-        annual: [
-            { id: 1, text: 'Clear out window sill drain holes', month: '' },
-            { id: 2, text: 'Service the chainsaw', month: '' },
-            { id: 3, text: 'Service the ride on', month: '' },
-            { id: 4, text: 'Clear the driveway culvert', month: '' },
-            { id: 5, text: 'Rat traps', month: '' },
-            { id: 6, text: 'Feed the trees', month: '' },
-            { id: 7, text: 'Hedge trimming', month: '' },
-        ],
-        shopping: [
-            { id: 1, text: 'Light bulbs', completed: false },
-            { id: 2, text: 'Garden soil', completed: false },
-        ],
-        thingsToBuy: [
-            { id: 1, text: 'Stakes for fruit trees and straps', completed: false },
-            { id: 2, text: 'Vacuum cleaner', completed: false },
-            { id: 3, text: 'BBQ', completed: false },
-            { id: 4, text: 'Brazier', completed: false },
-            { id: 5, text: 'Outdoor furniture', completed: false },
-            { id: 6, text: 'Watering can', completed: false },
-            { id: 7, text: 'Soft buckets with handles', completed: false },
-            { id: 8, text: 'Compost bin - standing spinner', completed: false },
-            { id: 9, text: 'Air compressor hose attachment', completed: false },
-        ],
+        leaving: [],
+        projects: [],
+        tasks: [],
+        annual: [],
+        shopping: [],
+        thingsToBuy: [],
     },
-    calendar: [
-        { id: 1, startDate: '2025-10-25', endDate: '2025-10-30', guest: 'Smith Family' },
-        { id: 2, startDate: '2025-11-05', endDate: '2025-11-10', guest: 'John & Sarah' },
-    ],
-    documents: [
-        {
-            id: 1,
-            name: 'equipment.pdf',
-            category: 'Manuals',
-            type: 'application/pdf',
-            size: '2.5 MB',
-            uploadDate: '2025-10-23',
-            data: null, // Base64 data stored here
-        },
-    ],
+    calendar: [],
+    documents: [],
 };
 
 function PropertyManager() {
@@ -476,6 +369,7 @@ function PropertyManager() {
         { id: 'map', label: 'Map', icon: Icons.Map },
         { id: 'info', label: 'Info', icon: Icons.Info },
         { id: 'lists', label: 'Lists', icon: Icons.List },
+        { id: 'reference', label: 'Reference', icon: Icons.Check },
         { id: 'calendar', label: 'Calendar', icon: Icons.Calendar },
         { id: 'documents', label: 'Docs', icon: Icons.Document },
     ];
@@ -542,6 +436,7 @@ function PropertyManager() {
                 {activeTab === 'map' && <MapView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'info' && <InfoView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'lists' && <ListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'reference' && <ReferenceListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'calendar' && <CalendarView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'documents' && <DocumentsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
             </main>
@@ -951,10 +846,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
-        { id: 'leaving', label: 'Leaving Checklist' },
         { id: 'projects', label: 'Projects' },
         { id: 'tasks', label: 'Tasks' },
-        { id: 'annual', label: 'Annual Jobs' },
         { id: 'thingsToBuy', label: 'Things to Buy' },
     ];
 
@@ -963,7 +856,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         
         const newItem = {
             text: newItemText,
-            ...(activeList === 'leaving' ? { checked: false } : { completed: false }),
+            completed: false,
         };
         
         if (useBackend) {
@@ -987,13 +880,11 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const toggleItem = async (id) => {
         if (useBackend) {
-            // Find the item to get current state
             const item = data.lists[activeList].find(i => i.id === id);
-            const field = activeList === 'leaving' ? 'checked' : 'completed';
-            const newValue = !item[field];
+            const newValue = !item.completed;
             
             await updateData(async () => {
-                await propertyAPI.updateListItem(id, { [field]: newValue });
+                await propertyAPI.updateListItem(id, { completed: newValue });
             });
         } else {
             setData({
@@ -1002,11 +893,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     ...data.lists,
                     [activeList]: data.lists[activeList].map(item =>
                         item.id === id
-                            ? {
-                                  ...item,
-                                  [activeList === 'leaving' ? 'checked' : 'completed']:
-                                      !(activeList === 'leaving' ? item.checked : item.completed),
-                              }
+                            ? { ...item, completed: !item.completed }
                             : item
                     ),
                 },
@@ -1085,22 +972,192 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         <button
                             onClick={() => toggleItem(item.id)}
                             className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                                (activeList === 'leaving' ? item.checked : item.completed)
+                                item.completed
                                     ? 'bg-emerald-500 border-emerald-500'
                                     : 'border-gray-300'
                             }`}
                         >
-                            {(activeList === 'leaving' ? item.checked : item.completed) && (
+                            {item.completed && (
                                 <Icons.Check />
                             )}
                         </button>
                         <span
                             className={`flex-1 ${
-                                (activeList === 'leaving' ? item.checked : item.completed)
+                                item.completed
                                     ? 'line-through text-gray-400'
                                     : 'text-gray-800'
                             }`}
                         >
+                            {item.text}
+                        </span>
+                        <button
+                            onClick={() => setConfirmDelete(item.id)}
+                            className="text-red-500 p-1"
+                        >
+                            <Icons.Trash />
+                        </button>
+                    </div>
+                ))}
+                {data.lists[activeList].length === 0 && (
+                    <div className="text-center text-gray-400 py-8">
+                        No items yet. Add your first item above!
+                    </div>
+                )}
+            </div>
+
+            {/* Confirm Delete Dialog */}
+            {confirmDelete && (
+                <ConfirmDialog
+                    message="Delete this item?"
+                    onConfirm={() => deleteItem(confirmDelete)}
+                    onCancel={() => setConfirmDelete(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+function ReferenceListsView({ data, setData, showToast, useBackend, updateData }) {
+    const [activeList, setActiveList] = useState('leaving');
+    const [newItemText, setNewItemText] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState(null);
+
+    const listTypes = [
+        { id: 'leaving', label: 'Leaving Checklist' },
+        { id: 'annual', label: 'Annual Jobs' },
+    ];
+
+    const addItem = async () => {
+        if (!newItemText.trim()) return;
+        
+        const newItem = {
+            text: newItemText,
+            checked: false,
+        };
+        
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.addListItem(activeList, newItem);
+            });
+        } else {
+            newItem.id = generateId();
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: [...data.lists[activeList], newItem],
+                },
+            });
+        }
+        
+        setNewItemText('');
+        showToast('Item added!');
+    };
+
+    const toggleItem = async (id) => {
+        if (useBackend) {
+            const item = data.lists[activeList].find(i => i.id === id);
+            const newValue = !item.checked;
+            
+            await updateData(async () => {
+                await propertyAPI.updateListItem(id, { checked: newValue });
+            });
+        } else {
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: data.lists[activeList].map(item =>
+                        item.id === id
+                            ? { ...item, checked: !item.checked }
+                            : item
+                    ),
+                },
+            });
+        }
+    };
+
+    const deleteItem = async (id) => {
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.deleteListItem(id);
+            });
+        } else {
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: data.lists[activeList].filter(item => item.id !== id),
+                },
+            });
+        }
+        
+        setConfirmDelete(null);
+        showToast('Item deleted');
+    };
+
+    return (
+        <div className="p-4">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Reference Lists</h2>
+
+            {/* List Type Selector */}
+            <div className="flex overflow-x-auto gap-2 mb-4 pb-2">
+                {listTypes.map(type => (
+                    <button
+                        key={type.id}
+                        onClick={() => setActiveList(type.id)}
+                        className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold transition-colors ${
+                            activeList === type.id
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-white text-gray-700 border'
+                        }`}
+                    >
+                        {type.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Add Item */}
+            <div className="bg-white p-4 rounded-lg shadow mb-4">
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        placeholder={`Add to ${listTypes.find(t => t.id === activeList)?.label}`}
+                        value={newItemText}
+                        onChange={(e) => setNewItemText(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addItem()}
+                        className="flex-1 p-2 border rounded"
+                    />
+                    <button
+                        onClick={addItem}
+                        disabled={!newItemText.trim()}
+                        className="bg-emerald-500 text-white px-4 py-2 rounded disabled:bg-gray-300"
+                    >
+                        <Icons.Plus />
+                    </button>
+                </div>
+            </div>
+
+            {/* Items - Checkboxes that stay visible */}
+            <div className="space-y-2">
+                {data.lists[activeList].map(item => (
+                    <div
+                        key={item.id}
+                        className="bg-white p-4 rounded-lg shadow flex items-center gap-3"
+                    >
+                        <button
+                            onClick={() => toggleItem(item.id)}
+                            className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                                item.checked
+                                    ? 'bg-emerald-500 border-emerald-500'
+                                    : 'border-gray-300'
+                            }`}
+                        >
+                            {item.checked && (
+                                <Icons.Check />
+                            )}
+                        </button>
+                        <span className="flex-1 text-gray-800">
                             {item.text}
                         </span>
                         <button
