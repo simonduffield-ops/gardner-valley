@@ -1215,65 +1215,23 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - Refined with immediate ref-based detection
-    const handleTouchStart = (e, index) => {
-        // Don't interfere with button clicks
-        if (e.target.closest('button')) {
-            return;
+    // Mobile touch handlers - DRAG HANDLE ONLY (simple & reliable!)
+    const handleDragHandleTouchStart = (e, index) => {
+        e.stopPropagation(); // Don't let this bubble to item
+        
+        // Start drag immediately when touching handle - no long press!
+        draggedRef.current = index;
+        setDraggedItem(index);
+        setIsDragging(true);
+        
+        // Haptic feedback
+        if (window.navigator.vibrate) {
+            window.navigator.vibrate(50);
         }
-
-        const touch = e.touches[0];
-        touchStartY.current = touch.clientY;
-        touchStartX.current = touch.clientX;
-        hasMoved.current = false;
-        
-        // Use ref for immediate effect (no async state delay)
-        isLongPressingRef.current = true;
-        
-        longPressTimer.current = setTimeout(() => {
-            // Only start drag if user hasn't scrolled away
-            if (isLongPressingRef.current) {
-                draggedRef.current = index;
-                setDraggedItem(index);
-                setIsDragging(true);
-                isLongPressingRef.current = false;
-                
-                // Haptic feedback
-                if (window.navigator.vibrate) {
-                    window.navigator.vibrate(50);
-                }
-            }
-        }, 250); // Slightly faster response
     };
 
-    const handleTouchMove = (e, index) => {
-        const touch = e.touches[0];
-        const deltaY = Math.abs(touch.clientY - touchStartY.current);
-        const deltaX = Math.abs(touch.clientX - touchStartX.current);
-        
-        // If long-pressing but not yet dragging
-        if (isLongPressingRef.current && !isDragging) {
-            // On first movement, check intent
-            if (!hasMoved.current && (deltaY > 5 || deltaX > 5)) {
-                hasMoved.current = true;
-                
-                // If moving mostly vertical, it's a scroll
-                if (deltaY > deltaX * 1.5) {
-                    clearTimeout(longPressTimer.current);
-                    longPressTimer.current = null;
-                    isLongPressingRef.current = false;
-                    return; // Allow scroll
-                }
-            }
-            
-            // Prevent scroll during long-press detection
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-            return;
-        }
-
-        // If actively dragging
+    const handleTouchMove = (e) => {
+        // Only handle movement if actively dragging
         if (isDragging && draggedRef.current !== null) {
             // Prevent scrolling while dragging
             if (e.cancelable) {
@@ -1281,6 +1239,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             }
             e.stopPropagation();
             
+            const touch = e.touches[0];
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
             
             if (element) {
@@ -1298,13 +1257,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const handleTouchEnd = (e) => {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-        isLongPressingRef.current = false;
-        hasMoved.current = false;
-        
         if (isDragging) {
-            // End the drag
             draggedRef.current = null;
             setDraggedItem(null);
             setIsDragging(false);
@@ -1312,11 +1265,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const handleTouchCancel = (e) => {
-        // Handle touch interruptions (calls, notifications, etc.)
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-        isLongPressingRef.current = false;
-        hasMoved.current = false;
         draggedRef.current = null;
         setDraggedItem(null);
         setIsDragging(false);
@@ -1325,7 +1273,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     // Cleanup on unmount (when switching tabs)
     useEffect(() => {
         return () => {
-            clearTimeout(longPressTimer.current);
             clearTimeout(saveOrderTimer.current);
             draggedRef.current = null;
         };
@@ -1424,20 +1371,22 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onDragStart={(e) => handleDesktopDragStart(e, index)}
                             onDragOver={(e) => handleDesktopDragOver(e, index)}
                             onDragEnd={handleDesktopDragEnd}
-                            onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={(e) => handleTouchMove(e, index)}
+                            onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
                             onTouchCancel={handleTouchCancel}
                             className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all select-none ${
                                 draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
                             style={{
-                                cursor: draggedItem === index ? 'grabbing' : 'grab',
+                                cursor: draggedItem === index ? 'grabbing' : 'default',
                                 WebkitUserSelect: 'none',
                                 userSelect: 'none'
                             }}
                         >
-                            <div className="text-gray-400">
+                            <div 
+                                className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
+                                onTouchStart={(e) => handleDragHandleTouchStart(e, index)}
+                            >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                 </svg>
@@ -1464,20 +1413,22 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onDragStart={(e) => handleDesktopDragStart(e, index)}
                             onDragOver={(e) => handleDesktopDragOver(e, index)}
                             onDragEnd={handleDesktopDragEnd}
-                            onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={(e) => handleTouchMove(e, index)}
+                            onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
                             onTouchCancel={handleTouchCancel}
                             className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
                                 draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
                             style={{
-                                cursor: draggedItem === index ? 'grabbing' : 'grab',
+                                cursor: draggedItem === index ? 'grabbing' : 'default',
                                 WebkitUserSelect: 'none',
                                 userSelect: 'none'
                             }}
                         >
-                            <div className="text-gray-400">
+                            <div 
+                                className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
+                                onTouchStart={(e) => handleDragHandleTouchStart(e, index)}
+                            >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                 </svg>
@@ -1537,12 +1488,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
     const draggedRef = useRef(null);
-    const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
-    const isLongPressingRef = useRef(false);
-    const touchStartY = useRef(0);
-    const touchStartX = useRef(0);
-    const hasMoved = useRef(false);
     const saveOrderTimer = useRef(null);
     const pendingSave = useRef(false);
 
@@ -1705,65 +1651,23 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - Refined with immediate ref-based detection
-    const handleTouchStart = (e, index) => {
-        // Don't interfere with button clicks
-        if (e.target.closest('button')) {
-            return;
+    // Mobile touch handlers - DRAG HANDLE ONLY (simple & reliable!)
+    const handleDragHandleTouchStart = (e, index) => {
+        e.stopPropagation(); // Don't let this bubble to item
+        
+        // Start drag immediately when touching handle - no long press!
+        draggedRef.current = index;
+        setDraggedItem(index);
+        setIsDragging(true);
+        
+        // Haptic feedback
+        if (window.navigator.vibrate) {
+            window.navigator.vibrate(50);
         }
-
-        const touch = e.touches[0];
-        touchStartY.current = touch.clientY;
-        touchStartX.current = touch.clientX;
-        hasMoved.current = false;
-        
-        // Use ref for immediate effect (no async state delay)
-        isLongPressingRef.current = true;
-        
-        longPressTimer.current = setTimeout(() => {
-            // Only start drag if user hasn't scrolled away
-            if (isLongPressingRef.current) {
-                draggedRef.current = index;
-                setDraggedItem(index);
-                setIsDragging(true);
-                isLongPressingRef.current = false;
-                
-                // Haptic feedback
-                if (window.navigator.vibrate) {
-                    window.navigator.vibrate(50);
-                }
-            }
-        }, 250); // Slightly faster response
     };
 
-    const handleTouchMove = (e, index) => {
-        const touch = e.touches[0];
-        const deltaY = Math.abs(touch.clientY - touchStartY.current);
-        const deltaX = Math.abs(touch.clientX - touchStartX.current);
-        
-        // If long-pressing but not yet dragging
-        if (isLongPressingRef.current && !isDragging) {
-            // On first movement, check intent
-            if (!hasMoved.current && (deltaY > 5 || deltaX > 5)) {
-                hasMoved.current = true;
-                
-                // If moving mostly vertical, it's a scroll
-                if (deltaY > deltaX * 1.5) {
-                    clearTimeout(longPressTimer.current);
-                    longPressTimer.current = null;
-                    isLongPressingRef.current = false;
-                    return; // Allow scroll
-                }
-            }
-            
-            // Prevent scroll during long-press detection
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-            return;
-        }
-
-        // If actively dragging
+    const handleTouchMove = (e) => {
+        // Only handle movement if actively dragging
         if (isDragging && draggedRef.current !== null) {
             // Prevent scrolling while dragging
             if (e.cancelable) {
@@ -1771,6 +1675,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             }
             e.stopPropagation();
             
+            const touch = e.touches[0];
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
             
             if (element) {
@@ -1788,13 +1693,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     };
 
     const handleTouchEnd = (e) => {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-        isLongPressingRef.current = false;
-        hasMoved.current = false;
-        
         if (isDragging) {
-            // End the drag
             draggedRef.current = null;
             setDraggedItem(null);
             setIsDragging(false);
@@ -1802,11 +1701,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     };
 
     const handleTouchCancel = (e) => {
-        // Handle touch interruptions (calls, notifications, etc.)
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-        isLongPressingRef.current = false;
-        hasMoved.current = false;
         draggedRef.current = null;
         setDraggedItem(null);
         setIsDragging(false);
@@ -1815,7 +1709,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     // Cleanup on unmount (when switching tabs)
     useEffect(() => {
         return () => {
-            clearTimeout(longPressTimer.current);
             clearTimeout(saveOrderTimer.current);
             draggedRef.current = null;
         };
@@ -1882,20 +1775,22 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                         onDragStart={(e) => handleDesktopDragStart(e, index)}
                         onDragOver={(e) => handleDesktopDragOver(e, index)}
                         onDragEnd={handleDesktopDragEnd}
-                        onTouchStart={(e) => handleTouchStart(e, index)}
-                        onTouchMove={(e) => handleTouchMove(e, index)}
+                        onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                         onTouchCancel={handleTouchCancel}
                         className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
                             draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                         }`}
                         style={{
-                            cursor: draggedItem === index ? 'grabbing' : 'grab',
+                            cursor: draggedItem === index ? 'grabbing' : 'default',
                             WebkitUserSelect: 'none',
                             userSelect: 'none'
                         }}
                     >
-                        <div className="text-gray-400">
+                        <div 
+                            className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
+                            onTouchStart={(e) => handleDragHandleTouchStart(e, index)}
+                        >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                             </svg>
