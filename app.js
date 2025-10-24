@@ -1038,6 +1038,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const draggedRef = useRef(null);
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isLongPressing, setIsLongPressing] = useState(false);
     const touchStartY = useRef(0);
     const touchStartX = useRef(0);
     const saveOrderTimer = useRef(null);
@@ -1213,7 +1214,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - Safari-compatible version
+    // Mobile touch handlers - Safari-compatible with proper scroll prevention
     const handleTouchStart = (e, index) => {
         // Don't interfere with button clicks
         if (e.target.closest('button')) {
@@ -1223,6 +1224,9 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const touch = e.touches[0];
         touchStartY.current = touch.clientY;
         touchStartX.current = touch.clientX;
+        
+        // Start long press - set state immediately to prevent scroll
+        setIsLongPressing(true);
         
         longPressTimer.current = setTimeout(() => {
             // Start drag after long press
@@ -1242,36 +1246,43 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const deltaY = Math.abs(touch.clientY - touchStartY.current);
         const deltaX = Math.abs(touch.clientX - touchStartX.current);
         
-        if (!isDragging && longPressTimer.current) {
-            // Check if user is scrolling (vertical movement)
+        // If long-pressing but not yet dragging
+        if (isLongPressing && !isDragging) {
+            // Check if user is trying to scroll (significant vertical movement)
             if (deltaY > 10 && deltaY > deltaX) {
-                // User is scrolling vertically, cancel the long press
+                // User is scrolling, cancel the long press and allow scroll
                 clearTimeout(longPressTimer.current);
                 longPressTimer.current = null;
-                return;
+                setIsLongPressing(false);
+                return; // Allow default scroll behavior
             }
-        }
-
-        if (!isDragging || draggedRef.current === null) {
+            
+            // Small movement during long press - prevent scroll
+            if (e.cancelable) {
+                e.preventDefault();
+            }
             return;
         }
 
-        // Prevent scrolling while actively dragging
-        if (e.cancelable) {
-            e.preventDefault();
-        }
-        e.stopPropagation();
-        
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        
-        if (element) {
-            const itemElement = element.closest('[data-item-index]');
-            if (itemElement) {
-                const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                
-                if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
-                    reorderItems(draggedRef.current, hoverIndex);
-                    draggedRef.current = hoverIndex;
+        // If actively dragging
+        if (isDragging && draggedRef.current !== null) {
+            // Prevent scrolling while dragging
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+            e.stopPropagation();
+            
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (element) {
+                const itemElement = element.closest('[data-item-index]');
+                if (itemElement) {
+                    const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                    
+                    if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
+                        reorderItems(draggedRef.current, hoverIndex);
+                        draggedRef.current = hoverIndex;
+                    }
                 }
             }
         }
@@ -1280,6 +1291,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const handleTouchEnd = (e) => {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
+        setIsLongPressing(false);
         
         if (isDragging) {
             // End the drag
@@ -1293,6 +1305,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         // Handle touch interruptions (calls, notifications, etc.)
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
+        setIsLongPressing(false);
         draggedRef.current = null;
         setDraggedItem(null);
         setIsDragging(false);
@@ -1515,6 +1528,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const draggedRef = useRef(null);
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isLongPressing, setIsLongPressing] = useState(false);
     const touchStartY = useRef(0);
     const touchStartX = useRef(0);
     const saveOrderTimer = useRef(null);
@@ -1679,7 +1693,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - Safari-compatible version
+    // Mobile touch handlers - Safari-compatible with proper scroll prevention
     const handleTouchStart = (e, index) => {
         // Don't interfere with button clicks
         if (e.target.closest('button')) {
@@ -1689,6 +1703,9 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         const touch = e.touches[0];
         touchStartY.current = touch.clientY;
         touchStartX.current = touch.clientX;
+        
+        // Start long press - set state immediately to prevent scroll
+        setIsLongPressing(true);
         
         longPressTimer.current = setTimeout(() => {
             // Start drag after long press
@@ -1708,36 +1725,43 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         const deltaY = Math.abs(touch.clientY - touchStartY.current);
         const deltaX = Math.abs(touch.clientX - touchStartX.current);
         
-        if (!isDragging && longPressTimer.current) {
-            // Check if user is scrolling (vertical movement)
+        // If long-pressing but not yet dragging
+        if (isLongPressing && !isDragging) {
+            // Check if user is trying to scroll (significant vertical movement)
             if (deltaY > 10 && deltaY > deltaX) {
-                // User is scrolling vertically, cancel the long press
+                // User is scrolling, cancel the long press and allow scroll
                 clearTimeout(longPressTimer.current);
                 longPressTimer.current = null;
-                return;
+                setIsLongPressing(false);
+                return; // Allow default scroll behavior
             }
-        }
-
-        if (!isDragging || draggedRef.current === null) {
+            
+            // Small movement during long press - prevent scroll
+            if (e.cancelable) {
+                e.preventDefault();
+            }
             return;
         }
 
-        // Prevent scrolling while actively dragging
-        if (e.cancelable) {
-            e.preventDefault();
-        }
-        e.stopPropagation();
-        
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        
-        if (element) {
-            const itemElement = element.closest('[data-item-index]');
-            if (itemElement) {
-                const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                
-                if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
-                    reorderItems(draggedRef.current, hoverIndex);
-                    draggedRef.current = hoverIndex;
+        // If actively dragging
+        if (isDragging && draggedRef.current !== null) {
+            // Prevent scrolling while dragging
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+            e.stopPropagation();
+            
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (element) {
+                const itemElement = element.closest('[data-item-index]');
+                if (itemElement) {
+                    const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                    
+                    if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
+                        reorderItems(draggedRef.current, hoverIndex);
+                        draggedRef.current = hoverIndex;
+                    }
                 }
             }
         }
@@ -1746,6 +1770,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const handleTouchEnd = (e) => {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
+        setIsLongPressing(false);
         
         if (isDragging) {
             // End the drag
@@ -1759,6 +1784,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         // Handle touch interruptions (calls, notifications, etc.)
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
+        setIsLongPressing(false);
         draggedRef.current = null;
         setDraggedItem(null);
         setIsDragging(false);
