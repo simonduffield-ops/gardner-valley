@@ -1233,9 +1233,13 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 </div>
                 <button
                     onClick={() => setShowAddSection(!showAddSection)}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
                 >
-                    {showAddSection ? '− Cancel' : '+ Add Section'}
+                    {showAddSection ? (
+                        <>✕ Cancel</>
+                    ) : (
+                        <>📑 Add Section Header</>
+                    )}
                 </button>
                 {showAddSection && (
                     <div className="flex gap-2 mt-2 pt-2 border-t">
@@ -1273,7 +1277,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onTouchStart={(e) => handleTouchStart(e, index)}
                             onTouchMove={(e) => handleTouchMove(e, index)}
                             onTouchEnd={handleTouchEnd}
-                            className={`bg-gradient-to-r from-gray-100 to-gray-50 p-3 rounded-lg flex items-center gap-3 cursor-move active:opacity-50 transition-opacity border-l-4 border-emerald-500 ${
+                            className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
                                 draggedItem === index ? 'opacity-50' : ''
                             }`}
                         >
@@ -1282,9 +1286,12 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                 </svg>
                             </div>
-                            <span className="flex-1 font-bold text-gray-700 uppercase text-sm tracking-wide">
-                                {item.text}
-                            </span>
+                            <div className="flex-1 flex items-center gap-2">
+                                <span className="text-emerald-600 text-lg">📑</span>
+                                <span className="font-bold text-emerald-700 uppercase text-sm tracking-wide">
+                                    {item.text}
+                                </span>
+                            </div>
                             <button
                                 onClick={() => setConfirmDelete(item.id)}
                                 className="text-red-500 p-1 hover:bg-red-50 rounded"
