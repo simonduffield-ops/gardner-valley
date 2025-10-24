@@ -625,12 +625,6 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
                 </div>
             )}
 
-            {!showAddMarker && (
-                <div className="mb-3 text-center text-sm text-gray-600 bg-blue-50 p-2 rounded-lg">
-                    💡 Pinch to zoom • Drag to pan • Scroll wheel to zoom
-                </div>
-            )}
-
             <div
                 ref={mapRef}
                 onClick={handleMapClick}
