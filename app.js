@@ -319,52 +319,6 @@ function PropertyManager() {
         }
     }, [useBackend, showToast]);
 
-    // Export data function
-    const exportData = () => {
-        try {
-            const dataStr = JSON.stringify(data, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `property-data-${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-            showToast('Data exported successfully!');
-        } catch (e) {
-            console.error('Export failed:', e);
-            showToast('Export failed. Please try again.', 'error');
-        }
-    };
-
-    // Import data function
-    const importData = (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const importedData = JSON.parse(e.target.result);
-                // Validate data structure
-                if (importedData.mapMarkers && importedData.contacts && importedData.lists && importedData.calendar) {
-                    setData(importedData);
-                    showToast('Data imported successfully!');
-                } else {
-                    showToast('Invalid file format.', 'error');
-                }
-            } catch (error) {
-                console.error('Import failed:', error);
-                showToast('Failed to import data. Invalid file.', 'error');
-            }
-        };
-        reader.onerror = () => {
-            showToast('Failed to read file.', 'error');
-        };
-        reader.readAsText(file);
-        event.target.value = ''; // Reset input
-    };
-
     const tabs = [
         { id: 'map', label: 'Map', icon: Icons.Map },
         { id: 'info', label: 'Info', icon: Icons.Info },
@@ -396,38 +350,19 @@ function PropertyManager() {
                     <span>Syncing...</span>
                 </div>
             )}
-            {/* Header with Export/Import */}
+            {/* Header */}
             <header className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-4 shadow-lg">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <a
-                            href="https://maps.app.goo.gl/4c9phER1pxvepQjy7"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-colors"
-                            title="Open in Google Maps"
-                        >
-                            <Icons.MapPin />
-                        </a>
-                        <h1 className="text-xl font-bold">Gardner Valley</h1>
-                    </div>
-                    <div className="flex gap-2">
-                        <label className="cursor-pointer bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-colors">
-                            <input
-                                type="file"
-                                accept=".json"
-                                onChange={importData}
-                                className="hidden"
-                            />
-                            <Icons.Upload />
-                        </label>
-                        <button
-                            onClick={exportData}
-                            className="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-colors"
-                        >
-                            <Icons.Download />
-                        </button>
-                    </div>
+                <div className="flex items-center gap-2">
+                    <a
+                        href="https://maps.app.goo.gl/4c9phER1pxvepQjy7"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-colors"
+                        title="Open in Google Maps"
+                    >
+                        <Icons.MapPin />
+                    </a>
+                    <h1 className="text-xl font-bold">Gardner Valley</h1>
                 </div>
             </header>
 
