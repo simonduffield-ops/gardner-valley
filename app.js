@@ -1169,11 +1169,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         }, 400); // 400ms long press (slightly faster)
     };
 
-    const handleLongPressEnd = () => {
-        clearTimeout(longPressTimer.current);
-        setIsLongPressing(false);
-    };
-
     const handleTouchMove = (e) => {
         // Prevent scrolling during long press or dragging
         if (isLongPressing || isDragging) {
@@ -1199,6 +1194,14 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     draggedRef.current = hoverIndex;
                 }
             }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        // Only clear if we haven't started dragging yet
+        if (!isDragging) {
+            clearTimeout(longPressTimer.current);
+            setIsLongPressing(false);
         }
     };
 
@@ -1324,7 +1327,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onDragOver={(e) => handleDesktopDragOver(e, index)}
                             onDragEnd={handleDesktopDragEnd}
                             onTouchStart={(e) => handleLongPressStart(e, index)}
-                            onTouchEnd={handleLongPressEnd}
+                            onTouchEnd={handleTouchEnd}
                             className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all select-none ${
                                 draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
@@ -1363,7 +1366,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onDragOver={(e) => handleDesktopDragOver(e, index)}
                             onDragEnd={handleDesktopDragEnd}
                             onTouchStart={(e) => handleLongPressStart(e, index)}
-                            onTouchEnd={handleLongPressEnd}
+                            onTouchEnd={handleTouchEnd}
                             className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
                                 draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
@@ -1601,11 +1604,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         }, 400); // 400ms long press (slightly faster)
     };
 
-    const handleLongPressEnd = () => {
-        clearTimeout(longPressTimer.current);
-        setIsLongPressing(false);
-    };
-
     const handleTouchMove = (e) => {
         // Prevent scrolling during long press or dragging
         if (isLongPressing || isDragging) {
@@ -1631,6 +1629,14 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     draggedRef.current = hoverIndex;
                 }
             }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        // Only clear if we haven't started dragging yet
+        if (!isDragging) {
+            clearTimeout(longPressTimer.current);
+            setIsLongPressing(false);
         }
     };
 
@@ -1724,7 +1730,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                         onDragOver={(e) => handleDesktopDragOver(e, index)}
                         onDragEnd={handleDesktopDragEnd}
                         onTouchStart={(e) => handleLongPressStart(e, index)}
-                        onTouchEnd={handleLongPressEnd}
+                        onTouchEnd={handleTouchEnd}
                         className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
                             draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                         }`}
