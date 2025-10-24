@@ -36,6 +36,7 @@ Perfect for families managing a vacation home, rental property, or any shared pr
 - Pinch-to-zoom and pan support for mobile devices
 - Add labels for trees, buildings, irrigation/electrical lines, and equipment
 - 5 color-coded marker types (🌳 Tree, 🏠 Building, 💧 Irrigation, ⚡ Electrical, 🔧 Equipment)
+- Quick access to property location (opens Apple Maps on iOS, Google Maps on Android/Desktop)
 - **Synced across all devices** ☁️
 
 ### ℹ️ Important Information

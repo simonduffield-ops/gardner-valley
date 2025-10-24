@@ -225,6 +225,7 @@ function PropertyManager() {
     const [useBackend, setUseBackend] = useState(false);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
+    const [showMapChoice, setShowMapChoice] = useState(false);
 
     // Initialize - check for Supabase and load data
     useEffect(() => {
@@ -302,6 +303,40 @@ function PropertyManager() {
         setToast({ message, type });
     }, []);
 
+    // Handle opening maps - detect platform and offer choice on mobile
+    const handleOpenMaps = (e) => {
+        e.preventDefault();
+        
+        const address = "Gardner Valley"; // You can customize this
+        const googleMapsUrl = "https://maps.app.goo.gl/4c9phER1pxvepQjy7";
+        
+        // Detect platform
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+        const isMobile = isIOS || isAndroid;
+        
+        // Desktop - open Google Maps directly
+        if (!isMobile) {
+            window.open(googleMapsUrl, '_blank');
+            return;
+        }
+        
+        // Mobile - show choice dialog
+        setShowMapChoice(true);
+    };
+
+    const openInAppleMaps = () => {
+        // Apple Maps URL scheme - opens directly in Apple Maps app
+        window.location.href = "maps://?q=Gardner+Valley&sll=33.6672,-116.6561";
+        setShowMapChoice(false);
+    };
+
+    const openInGoogleMaps = () => {
+        // Google Maps URL - opens in Google Maps app if installed, otherwise browser
+        window.location.href = "https://maps.app.goo.gl/4c9phER1pxvepQjy7";
+        setShowMapChoice(false);
+    };
+
     // Helper function to update data with backend sync
     const updateData = useCallback(async (updateFn) => {
         if (useBackend) {
@@ -358,15 +393,13 @@ function PropertyManager() {
             {/* Header */}
             <header className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-4 shadow-lg">
                 <div className="flex items-center gap-2">
-                    <a
-                        href="https://maps.app.goo.gl/4c9phER1pxvepQjy7"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <button
+                        onClick={handleOpenMaps}
                         className="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-lg transition-colors"
-                        title="Open in Google Maps"
+                        title="Open in Maps"
                     >
                         <Icons.MapPin />
-                    </a>
+                    </button>
                     <h1 className="text-xl font-bold">Gardner Valley</h1>
                 </div>
             </header>
@@ -400,6 +433,36 @@ function PropertyManager() {
                     ))}
                 </div>
             </nav>
+
+            {/* Map Choice Dialog */}
+            {showMapChoice && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                        <h3 className="text-lg font-semibold mb-4">Open in Maps</h3>
+                        <p className="text-gray-600 mb-6">Choose which app to use:</p>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={openInAppleMaps}
+                                className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 px-4 rounded-lg font-semibold transition-colors"
+                            >
+                                🍎 Apple Maps
+                            </button>
+                            <button
+                                onClick={openInGoogleMaps}
+                                className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+                            >
+                                🗺️ Google Maps
+                            </button>
+                            <button
+                                onClick={() => setShowMapChoice(false)}
+                                className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg font-semibold transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Toast Notifications */}
             {toast && (
