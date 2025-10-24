@@ -1159,11 +1159,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     // Touch handlers for mobile (iOS) - ListsView
     const handleTouchStart = (e, index) => {
-        // Only allow dragging from the handle
-        const target = e.target;
-        const handle = target.closest('.drag-handle');
-        if (!handle) return;
-        
         e.preventDefault(); // Prevent scrolling
         const touch = e.touches[0];
         setTouchStart({ x: touch.clientX, y: touch.clientY, index });
@@ -1171,7 +1166,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const handleTouchMove = (e, index) => {
-        if (touchStart === null) return;
+        if (touchStart === null || draggedItem === null) return;
         
         e.preventDefault(); // Prevent scrolling while dragging
         const touch = e.touches[0];
@@ -1281,14 +1276,16 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={(e) => handleDragOver(e, index)}
                             onDragEnd={handleDragEnd}
-                            onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={(e) => handleTouchMove(e, index)}
-                            onTouchEnd={handleTouchEnd}
                             className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
                                 draggedItem === index ? 'opacity-50' : ''
                             }`}
                         >
-                            <div className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle">
+                            <div 
+                                className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
+                                onTouchStart={(e) => handleTouchStart(e, index)}
+                                onTouchMove={(e) => handleTouchMove(e, index)}
+                                onTouchEnd={handleTouchEnd}
+                            >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                 </svg>
@@ -1315,14 +1312,16 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={(e) => handleDragOver(e, index)}
                             onDragEnd={handleDragEnd}
-                            onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={(e) => handleTouchMove(e, index)}
-                            onTouchEnd={handleTouchEnd}
                             className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
                                 draggedItem === index ? 'opacity-50' : ''
                             }`}
                         >
-                            <div className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle">
+                            <div 
+                                className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
+                                onTouchStart={(e) => handleTouchStart(e, index)}
+                                onTouchMove={(e) => handleTouchMove(e, index)}
+                                onTouchEnd={handleTouchEnd}
+                            >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                 </svg>
@@ -1538,11 +1537,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     // Touch handlers for mobile (iOS) - ReferenceListsView
     const handleTouchStart = (e, index) => {
-        // Only allow dragging from the handle
-        const target = e.target;
-        const handle = target.closest('.drag-handle');
-        if (!handle) return;
-        
         e.preventDefault(); // Prevent scrolling
         const touch = e.touches[0];
         setTouchStart({ x: touch.clientX, y: touch.clientY, index });
@@ -1550,7 +1544,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     };
 
     const handleTouchMove = (e, index) => {
-        if (touchStart === null) return;
+        if (touchStart === null || draggedItem === null) return;
         
         e.preventDefault(); // Prevent scrolling while dragging
         const touch = e.touches[0];
@@ -1638,14 +1632,16 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                         onDragStart={(e) => handleDragStart(e, index)}
                         onDragOver={(e) => handleDragOver(e, index)}
                         onDragEnd={handleDragEnd}
-                        onTouchStart={(e) => handleTouchStart(e, index)}
-                        onTouchMove={(e) => handleTouchMove(e, index)}
-                        onTouchEnd={handleTouchEnd}
                         className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
                             draggedItem === index ? 'opacity-50' : ''
                         }`}
                     >
-                        <div className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle">
+                        <div 
+                            className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
+                            onTouchStart={(e) => handleTouchStart(e, index)}
+                            onTouchMove={(e) => handleTouchMove(e, index)}
+                            onTouchEnd={handleTouchEnd}
+                        >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                             </svg>
@@ -2254,3 +2250,6 @@ root.render(
         <PropertyManager />
     </ErrorBoundary>
 );
+
+
+
