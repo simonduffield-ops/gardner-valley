@@ -1235,12 +1235,22 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 </div>
                 <button
                     onClick={() => setShowAddSection(!showAddSection)}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                    className={`mt-3 px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                        showAddSection 
+                            ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                    }`}
                 >
                     {showAddSection ? (
-                        <>✕ Cancel</>
+                        <>
+                            <span className="text-lg">✕</span>
+                            <span>Cancel</span>
+                        </>
                     ) : (
-                        <>📑 Add Section Header</>
+                        <>
+                            <span className="text-lg">📑</span>
+                            <span>Add Section Header</span>
+                        </>
                     )}
                 </button>
                 {showAddSection && (
