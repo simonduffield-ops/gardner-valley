@@ -1096,9 +1096,39 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         showToast('Item deleted');
     };
 
+    const uncheckAll = async () => {
+        if (useBackend) {
+            await updateData(async () => {
+                // Update all items in current list to unchecked
+                const updatePromises = data.lists[activeList].map(item => 
+                    propertyAPI.updateListItem(item.id, { checked: false })
+                );
+                await Promise.all(updatePromises);
+            });
+        } else {
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: data.lists[activeList].map(item => ({ ...item, checked: false })),
+                },
+            });
+        }
+        showToast('All items unchecked');
+    };
+
     return (
         <div className="p-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Reference Lists</h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">Reference Lists</h2>
+                <button
+                    onClick={uncheckAll}
+                    disabled={data.lists[activeList].length === 0}
+                    className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 disabled:bg-gray-300"
+                >
+                    Uncheck All
+                </button>
+            </div>
 
             {/* List Type Selector */}
             <div className="flex overflow-x-auto gap-2 mb-4 pb-2">
