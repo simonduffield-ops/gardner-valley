@@ -923,6 +923,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [activeList, setActiveList] = useState('shopping');
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const [draggedItem, setDraggedItem] = useState(null);
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
@@ -1000,6 +1001,60 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         showToast('Item deleted');
     };
 
+    const reorderItems = async (startIndex, endIndex) => {
+        const items = Array.from(data.lists[activeList]);
+        const [removed] = items.splice(startIndex, 1);
+        items.splice(endIndex, 0, removed);
+
+        if (useBackend) {
+            // Update all items with new order
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: items,
+                },
+            });
+            
+            // Update order in backend for all items
+            try {
+                await Promise.all(
+                    items.map((item, index) => 
+                        propertyAPI.updateListItem(item.id, { sort_order: index })
+                    )
+                );
+            } catch (error) {
+                console.error('Error reordering items:', error);
+                showToast('Failed to save order', 'error');
+            }
+        } else {
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: items,
+                },
+            });
+        }
+    };
+
+    const handleDragStart = (e, index) => {
+        setDraggedItem(index);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e, index) => {
+        e.preventDefault();
+        if (draggedItem === null || draggedItem === index) return;
+        
+        reorderItems(draggedItem, index);
+        setDraggedItem(index);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedItem(null);
+    };
+
     return (
         <div className="p-4">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Lists</h2>
@@ -1044,11 +1099,22 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
             {/* Items */}
             <div className="space-y-2">
-                {data.lists[activeList].map(item => (
+                {data.lists[activeList].map((item, index) => (
                     <div
                         key={item.id}
-                        className="bg-white p-4 rounded-lg shadow flex items-center gap-3"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
+                            draggedItem === index ? 'opacity-50' : ''
+                        }`}
                     >
+                        <div className="text-gray-400 cursor-grab active:cursor-grabbing">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                            </svg>
+                        </div>
                         <button
                             onClick={() => toggleItem(item.id)}
                             className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
@@ -1101,6 +1167,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const [activeList, setActiveList] = useState('leaving');
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const [draggedItem, setDraggedItem] = useState(null);
 
     const listTypes = [
         { id: 'leaving', label: 'Leaving Checklist' },
@@ -1197,6 +1264,58 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         showToast('All items unchecked');
     };
 
+    const reorderItems = async (startIndex, endIndex) => {
+        const items = Array.from(data.lists[activeList]);
+        const [removed] = items.splice(startIndex, 1);
+        items.splice(endIndex, 0, removed);
+
+        if (useBackend) {
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: items,
+                },
+            });
+            
+            try {
+                await Promise.all(
+                    items.map((item, index) => 
+                        propertyAPI.updateListItem(item.id, { order: index })
+                    )
+                );
+            } catch (error) {
+                console.error('Error reordering items:', error);
+                showToast('Failed to save order', 'error');
+            }
+        } else {
+            setData({
+                ...data,
+                lists: {
+                    ...data.lists,
+                    [activeList]: items,
+                },
+            });
+        }
+    };
+
+    const handleDragStart = (e, index) => {
+        setDraggedItem(index);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e, index) => {
+        e.preventDefault();
+        if (draggedItem === null || draggedItem === index) return;
+        
+        reorderItems(draggedItem, index);
+        setDraggedItem(index);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedItem(null);
+    };
+
     return (
         <div className="p-4">
             <div className="flex justify-between items-center mb-4">
@@ -1250,11 +1369,22 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
             {/* Items - Checkboxes that stay visible */}
             <div className="space-y-2">
-                {data.lists[activeList].map(item => (
+                {data.lists[activeList].map((item, index) => (
                     <div
                         key={item.id}
-                        className="bg-white p-4 rounded-lg shadow flex items-center gap-3"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
+                            draggedItem === index ? 'opacity-50' : ''
+                        }`}
                     >
+                        <div className="text-gray-400 cursor-grab active:cursor-grabbing">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                            </svg>
+                        </div>
                         <button
                             onClick={() => toggleItem(item.id)}
                             className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
