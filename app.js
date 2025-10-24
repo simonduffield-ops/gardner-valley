@@ -1543,7 +1543,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             try {
                 await Promise.all(
                     items.map((item, index) => 
-                        propertyAPI.updateListItem(item.id, { order: index })
+                        propertyAPI.updateListItem(item.id, { sort_order: index })
                     )
                 );
             } catch (error) {
