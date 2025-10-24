@@ -1,6 +1,6 @@
-# 🏡 Property Manager PWA
+# 🏡 Gardner Valley - Property Management PWA
 
-A modern, mobile-optimized Progressive Web App for managing your property with ease.
+A modern, mobile-optimized Progressive Web App for managing your property with ease. **Now with shared backend support** - everyone sees the same data, no login required!
 
 ## Features
 
@@ -8,192 +8,171 @@ A modern, mobile-optimized Progressive Web App for managing your property with e
 - Interactive property map with customizable markers
 - Add labels for trees, buildings, irrigation/electrical lines, and equipment
 - Color-coded marker types for easy identification
-- Tap to place new markers, delete existing ones
-- Visual legend for all marker types
+- **Synced across all devices** ☁️
 
 ### ℹ️ Important Information
 - Store key contacts and information
 - Organized by categories (Utilities, Services, Other)
-- Easy add, edit, and delete functionality
 - Perfect for utility providers, service schedules, WiFi passwords, etc.
 
 ### 📋 Lists
-Five different list types to organize your property tasks:
-
-1. **Leaving Checklist** - Items stay visible when checked (perfect for shared use)
+Six different list types to organize your property:
+1. **Leaving Checklist** - Items stay visible when checked
 2. **Projects** - Track ongoing property projects
 3. **Tasks** - Daily to-do items
 4. **Annual Jobs** - Seasonal maintenance reminders
-5. **Shopping** - Things to buy for the property
-
-All lists support:
-- Add new items with one tap
-- Check/uncheck items
-- Delete items
-- Persistent storage (saves automatically)
+5. **Shopping** - Shopping list
+6. **Things to Buy** - Future purchases
 
 ### 📅 Occupancy Calendar
 - Track who's at the property and when
 - Add guest names with check-in/check-out dates
+- **Shared bookings** - everyone sees the same calendar ☁️
 - Visual indicator for current occupancy
-- Automatic sorting by date
-- Duration calculation
 
 ### 📄 Documents
 - Upload and store manuals, images, warranties, and receipts
-- Automatic categorization by file type
 - Support for images, PDFs, and documents (max 5MB per file)
-- Visual thumbnails for images
-- Full-screen preview for images
-- Download any document
-- Organize by categories: Manuals, Images, Warranties, Receipts, Other
-- Edit categories for each document
-- Grid view optimized for mobile browsing
-
-## Technical Features
-
-### Progressive Web App (PWA)
-- ✅ Install to home screen on mobile devices
-- ✅ Works offline with service worker caching
-- ✅ App-like experience with no browser chrome
-- ✅ Fast loading and smooth animations
-- ✅ Automatic data persistence with localStorage
-- ✅ Error boundary for graceful error handling
-- ✅ Debounced saves for optimal performance
-
-### Mobile-Optimized Design
-- Responsive layout optimized for phones
-- Touch-friendly tap targets
-- Bottom navigation for easy thumb access
-- Clean, modern aesthetic with Tailwind CSS
-- Smooth transitions and animations
-- Beautiful toast notifications
-- Confirmation dialogs for destructive actions
-
-### Data Persistence & Safety
-- All your data is automatically saved to your device's local storage
-- **Data Export/Import**: Backup and restore your data with JSON export/import
-- Storage quota checking to prevent data loss
-- Comprehensive error handling for file operations
-- No internet connection required after initial load!
-- Debounced saves prevent performance issues
-
-## Installation
-
-### On Mobile (iOS/Android)
-
-#### iOS Safari:
-1. Open the app in Safari
-2. Tap the Share button (square with arrow)
-3. Scroll down and tap "Add to Home Screen"
-4. Name it "Property Manager" and tap "Add"
-
-#### Android Chrome:
-1. Open the app in Chrome
-2. Tap the menu (three dots)
-3. Tap "Install app" or "Add to Home Screen"
-4. Confirm the installation
-
-### On Desktop
-1. Open in Chrome or Edge
-2. Look for the install icon in the address bar
-3. Click "Install"
-
-## Running Locally
-
-To run this app locally:
-
-1. Place all files in a directory
-2. Serve with any static file server:
-   ```bash
-   # Using Python
-   python -m http.server 8000
-   
-   # Using Node.js http-server
-   npx http-server
-   
-   # Using PHP
-   php -S localhost:8000
-   ```
-3. Open http://localhost:8000 in your browser
-
-## Data Management
-
-### Backup Your Data
-Click the **download icon** in the header to export all your data as a JSON file. This creates a complete backup you can save to your computer or cloud storage.
-
-### Restore Your Data
-Click the **upload icon** in the header and select a previously exported JSON file to restore your data. Perfect for:
-- Moving between devices
-- Creating regular backups
-- Recovering from issues
-- Sharing setup with family members
-
-## File Structure
-
-```
-property-manager/
-├── index.html          # Main HTML file
-├── app.js             # React application code
-├── manifest.json      # PWA manifest
-├── sw.js             # Service worker for offline support
-└── README.md         # This file
-```
-
-## Future Enhancement Ideas
-
-The app is designed to be easily extensible. Future features could include:
-
-- **Map Enhancements:**
-  - Photo attachments for markers
-  - Drawing tools for property boundaries
-  - Measurement tools
-  - GPS coordinates
-
-- **Smart Lists:**
-  - Recurring tasks with reminders
-  - Task assignments
-  - Progress tracking
-  - Due dates
-
-- **Calendar:**
-  - Integration with device calendar
-  - Booking conflicts detection
-  - Guest communication
-  - Cleaning schedules
-
-- **Documents:**
-  - Upload and store property documents
-  - Warranty information
-  - Maintenance records
-  - Photos and videos
-
-- **Expenses:**
-  - Track property expenses
-  - Budget management
-  - Receipt storage
-  - Financial reports
-
-- **Weather Integration:**
-  - Local weather forecast
-  - Alerts for property
-  - Seasonal recommendations
-
-## Browser Compatibility
-
-- ✅ iOS Safari 12+
-- ✅ Chrome/Edge (all platforms)
-- ✅ Firefox
-- ✅ Samsung Internet
-
-## License
-
-Free to use and modify for personal use.
-
-## Support
-
-This is a standalone PWA that runs entirely in your browser. All data is stored locally on your device. No account, server, or internet connection required after installation!
+- Organize by categories
 
 ---
 
-Built with ❤️ using React and Tailwind CSS
+## 🚀 Quick Start
+
+### Option 1: Local Storage Only (Simple)
+1. Open the app - works immediately!
+2. All data stays on your device
+3. Use export/import to share data
+
+### Option 2: Shared Backend (Family Use)
+**Everyone sees the same data - perfect for families!**
+
+#### Setup (10 minutes):
+1. Create free account at [supabase.com](https://supabase.com)
+2. Create new project
+3. Run database script:
+   - In Supabase → SQL Editor → New Query
+   - Copy/paste contents of `database-schema.sql`
+   - Click Run
+4. Get your credentials:
+   - Supabase → Settings → API
+   - Copy Project URL and anon public key
+5. Add credentials to `supabase-config.js`:
+   ```javascript
+   url: 'https://your-project.supabase.co'
+   anonKey: 'your-anon-key'
+   ```
+6. Deploy:
+   ```bash
+   git add .
+   git commit -m "Enable shared backend"
+   git push origin main
+   ```
+7. Wait 1-2 minutes, then refresh!
+
+#### What You Get:
+- ✅ Everyone sees the same bookings, lists, contacts
+- ✅ No login required - just share the link
+- ✅ Multi-device sync
+- ✅ Automatic backups
+- ✅ Real-time updates
+
+**The app shows "☁️ Backend Active" when connected to Supabase**
+
+---
+
+## 📱 Installation
+
+### iOS Safari:
+1. Open the app in Safari
+2. Tap Share → "Add to Home Screen"
+3. Name it "Gardner Valley"
+
+### Android Chrome:
+1. Open in Chrome
+2. Tap menu → "Install app"
+
+### GitHub Pages:
+The app runs at: `https://yourusername.github.io/gardner-valley/`
+
+---
+
+## 🔧 File Structure
+
+```
+gardner-valley/
+├── index.html              # Main HTML
+├── app.js                  # React application (with backend integration)
+├── manifest.json           # PWA manifest
+├── sw.js                   # Service worker
+├── supabase-config.js      # Backend configuration
+├── api-service.js          # Supabase API layer
+├── database-schema.sql     # Database setup script
+└── README.md              # This file
+```
+
+---
+
+## 💾 Data Management
+
+### Export/Import
+- **Export**: Download icon in header → saves JSON backup
+- **Import**: Upload icon in header → restores from JSON
+
+### Backend Status
+- **"☁️ Backend Active"** = Using Supabase (shared data)
+- **No indicator** = Using localStorage (device-only)
+
+---
+
+## 🐛 Troubleshooting
+
+### Backend Not Working?
+1. Check browser console (F12) for errors
+2. Verify credentials in `supabase-config.js`
+3. Check Supabase dashboard → Table Editor (should see tables)
+4. Hard refresh (Ctrl+Shift+R)
+
+### Common Issues:
+- **Old cached version**: Clear cache or hard refresh
+- **Tables missing**: Run `database-schema.sql` again
+- **RLS errors**: Make sure Row Level Security is DISABLED
+
+### Debug Commands (Browser Console):
+```javascript
+isSupabaseConfigured()  // Should return true
+propertyAPI.initialized // Should return true
+```
+
+---
+
+## 🔐 Security
+
+**With Backend:**
+- Access controlled by your GitHub Pages URL
+- Only people with the link can access
+- Good for trusted family/friends
+- Can add password protection if needed
+
+**Without Backend:**
+- 100% local to your device
+- Maximum privacy
+
+---
+
+## 🌟 Tech Stack
+
+- **Frontend**: React, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL)
+- **Hosting**: GitHub Pages
+- **PWA**: Service Worker, Web App Manifest
+
+---
+
+## 📝 License
+
+Free to use and modify for personal use.
+
+---
+
+Built with ❤️ for Gardner Valley
