@@ -451,7 +451,7 @@ function PropertyManager() {
             </header>
 
             {/* Content */}
-            <main className="flex-1 overflow-y-auto pb-20">
+            <main key={activeTab} className="flex-1 overflow-y-auto pb-20" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {activeTab === 'map' && <MapView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'info' && <InfoView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'lists' && <ListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
@@ -1298,6 +1298,15 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setIsDragging(false);
     };
 
+    // Cleanup on unmount (when switching tabs)
+    useEffect(() => {
+        return () => {
+            clearTimeout(longPressTimer.current);
+            clearTimeout(saveOrderTimer.current);
+            draggedRef.current = null;
+        };
+    }, []);
+
     return (
         <div className="p-4">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Lists</h2>
@@ -1754,6 +1763,15 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setDraggedItem(null);
         setIsDragging(false);
     };
+
+    // Cleanup on unmount (when switching tabs)
+    useEffect(() => {
+        return () => {
+            clearTimeout(longPressTimer.current);
+            clearTimeout(saveOrderTimer.current);
+            draggedRef.current = null;
+        };
+    }, []);
 
     return (
         <div className="p-4">
