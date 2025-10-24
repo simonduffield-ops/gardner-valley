@@ -413,6 +413,10 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
     const [newMarker, setNewMarker] = useState({ x: 50, y: 50, label: '', type: 'tree' });
     const [confirmDelete, setConfirmDelete] = useState(null);
     const mapRef = useRef(null);
+    const [scale, setScale] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
     const markerColors = {
         tree: 'bg-green-500',
@@ -422,12 +426,108 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
         equipment: 'bg-purple-500',
     };
 
+    // Pinch to zoom handling
+    useEffect(() => {
+        const mapElement = mapRef.current;
+        if (!mapElement) return;
+
+        let lastTouchDistance = 0;
+
+        const handleTouchStart = (e) => {
+            if (e.touches.length === 2) {
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                lastTouchDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+            }
+        };
+
+        const handleTouchMove = (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+
+                if (lastTouchDistance > 0) {
+                    const delta = currentDistance - lastTouchDistance;
+                    const newScale = Math.max(1, Math.min(4, scale + delta * 0.01));
+                    setScale(newScale);
+                }
+
+                lastTouchDistance = currentDistance;
+            }
+        };
+
+        const handleWheel = (e) => {
+            e.preventDefault();
+            const delta = e.deltaY * -0.01;
+            const newScale = Math.max(1, Math.min(4, scale + delta));
+            setScale(newScale);
+        };
+
+        mapElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+        mapElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+        mapElement.addEventListener('wheel', handleWheel, { passive: false });
+
+        return () => {
+            mapElement.removeEventListener('touchstart', handleTouchStart);
+            mapElement.removeEventListener('touchmove', handleTouchMove);
+            mapElement.removeEventListener('wheel', handleWheel);
+        };
+    }, [scale]);
+
+    // Pan handling
+    const handleMouseDown = (e) => {
+        if (showAddMarker) return;
+        if (e.touches && e.touches.length !== 1) return;
+        
+        setIsDragging(true);
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        setDragStart({ x: clientX - position.x, y: clientY - position.y });
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        setPosition({
+            x: clientX - dragStart.x,
+            y: clientY - dragStart.y,
+        });
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
     const handleMapClick = (e) => {
-        if (!showAddMarker) return;
+        if (!showAddMarker || isDragging) return;
+        
         const rect = mapRef.current.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        setNewMarker({ ...newMarker, x, y });
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        // Adjust for zoom and pan
+        const x = ((clientX - rect.left - position.x) / scale / rect.width) * 100;
+        const y = ((clientY - rect.top - position.y) / scale / rect.height) * 100;
+        
+        if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
+            setNewMarker({ ...newMarker, x, y });
+        }
+    };
+
+    const resetView = () => {
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
     };
 
     const addMarker = async () => {
@@ -470,14 +570,25 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
         <div className="p-4 pb-8">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">Property Map</h2>
-                <button
-                    onClick={() => setShowAddMarker(!showAddMarker)}
-                    className={`p-2 rounded-full ${
-                        showAddMarker ? 'bg-red-500' : 'bg-emerald-500'
-                    } text-white shadow-lg transition-colors`}
-                >
-                    {showAddMarker ? <Icons.X /> : <Icons.Plus />}
-                </button>
+                <div className="flex gap-2">
+                    {scale !== 1 && (
+                        <button
+                            onClick={resetView}
+                            className="p-2 rounded-full bg-blue-500 text-white shadow-lg transition-colors text-sm"
+                            title="Reset zoom"
+                        >
+                            ↺
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setShowAddMarker(!showAddMarker)}
+                        className={`p-2 rounded-full ${
+                            showAddMarker ? 'bg-red-500' : 'bg-emerald-500'
+                        } text-white shadow-lg transition-colors`}
+                    >
+                        {showAddMarker ? <Icons.X /> : <Icons.Plus />}
+                    </button>
+                </div>
             </div>
 
             {showAddMarker && (
@@ -514,21 +625,44 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
                 </div>
             )}
 
+            {!showAddMarker && (
+                <div className="mb-3 text-center text-sm text-gray-600 bg-blue-50 p-2 rounded-lg">
+                    💡 Pinch to zoom • Drag to pan • Scroll wheel to zoom
+                </div>
+            )}
+
             <div
                 ref={mapRef}
                 onClick={handleMapClick}
-                className="relative rounded-lg shadow-lg overflow-hidden touch-manipulation"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onTouchStart={handleMouseDown}
+                onTouchMove={handleMouseMove}
+                onTouchEnd={handleMouseUp}
+                className="relative rounded-lg shadow-lg overflow-hidden touch-none select-none"
                 style={{ 
-                    height: 'calc(100vh - 280px)',
+                    height: 'calc(100vh - 320px)',
                     minHeight: '400px',
-                    maxHeight: '600px',
-                    backgroundImage: 'url(gardner-valley-map.png)',
-                    backgroundSize: 'contain',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
+                    maxHeight: '700px',
+                    cursor: isDragging ? 'grabbing' : (showAddMarker ? 'crosshair' : 'grab'),
                     backgroundColor: '#f5f5f5'
                 }}
             >
+                <div
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: 'url(gardner-valley-map.png)',
+                        backgroundSize: 'contain',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+                        transformOrigin: 'center center',
+                        transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                    }}
+                >
                 {data.mapMarkers.map(marker => (
                     <div
                         key={marker.id}
@@ -552,6 +686,7 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
                         </div>
                     </div>
                 ))}
+                </div>
             </div>
 
             <div className="mt-4 bg-white p-4 rounded-lg shadow-md border border-gray-100">
