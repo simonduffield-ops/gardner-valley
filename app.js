@@ -1449,20 +1449,50 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const downloadDocument = (doc) => {
-        // iOS Safari doesn't support download attribute well
-        // Open in new tab for iOS, download for others
+        // Create a blob from the data URL
+        const byteString = atob(doc.data.split(',')[1]);
+        const mimeString = doc.data.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        
+        const blob = new Blob([ab], { type: mimeString });
+        const url = URL.createObjectURL(blob);
+        
+        // Check if running as standalone PWA
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                            window.navigator.standalone === true;
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         
-        if (isIOS) {
-            // For iOS, open in new tab
-            window.open(doc.data, '_blank');
+        if (isIOS && isStandalone) {
+            // In standalone mode on iOS, create a link and trigger click
+            // This should prompt iOS to handle the file
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = doc.name;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else if (isIOS) {
+            // For iOS in browser, open in new window
+            const newWindow = window.open(url, '_blank');
+            if (!newWindow) {
+                showToast('Please allow popups to view documents', 'error');
+            }
         } else {
             // For other platforms, trigger download
             const link = document.createElement('a');
-            link.href = doc.data;
+            link.href = url;
             link.download = doc.name;
             link.click();
         }
+        
+        // Clean up
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     };
 
     const updateDocCategory = async (id, newCategory) => {
