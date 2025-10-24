@@ -1230,45 +1230,52 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         }
     };
 
-    const handleTouchMove = (e) => {
-        // Only handle movement if actively dragging
-        if (isDragging && draggedRef.current !== null) {
-            // Prevent scrolling while dragging
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-            e.stopPropagation();
-            
-            const touch = e.touches[0];
-            const element = document.elementFromPoint(touch.clientX, touch.clientY);
-            
-            if (element) {
-                const itemElement = element.closest('[data-item-index]');
-                if (itemElement) {
-                    const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                    
-                    if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
-                        reorderItems(draggedRef.current, hoverIndex);
-                        draggedRef.current = hoverIndex;
+    // Attach document-level touch handlers when dragging
+    useEffect(() => {
+        if (!isDragging) return;
+        
+        const handleDocumentTouchMove = (e) => {
+            if (isDragging && draggedRef.current !== null) {
+                // Prevent scrolling while dragging
+                if (e.cancelable) {
+                    e.preventDefault();
+                }
+                
+                const touch = e.touches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                
+                if (element) {
+                    const itemElement = element.closest('[data-item-index]');
+                    if (itemElement) {
+                        const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                        
+                        if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
+                            reorderItems(draggedRef.current, hoverIndex);
+                            draggedRef.current = hoverIndex;
+                        }
                     }
                 }
             }
-        }
-    };
-
-    const handleTouchEnd = (e) => {
-        if (isDragging) {
-            draggedRef.current = null;
-            setDraggedItem(null);
-            setIsDragging(false);
-        }
-    };
-
-    const handleTouchCancel = (e) => {
-        draggedRef.current = null;
-        setDraggedItem(null);
-        setIsDragging(false);
-    };
+        };
+        
+        const handleDocumentTouchEnd = (e) => {
+            if (isDragging) {
+                draggedRef.current = null;
+                setDraggedItem(null);
+                setIsDragging(false);
+            }
+        };
+        
+        document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
+        document.addEventListener('touchend', handleDocumentTouchEnd);
+        document.addEventListener('touchcancel', handleDocumentTouchEnd);
+        
+        return () => {
+            document.removeEventListener('touchmove', handleDocumentTouchMove);
+            document.removeEventListener('touchend', handleDocumentTouchEnd);
+            document.removeEventListener('touchcancel', handleDocumentTouchEnd);
+        };
+    }, [isDragging]);
 
     // Cleanup on unmount (when switching tabs)
     useEffect(() => {
@@ -1371,9 +1378,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onDragStart={(e) => handleDesktopDragStart(e, index)}
                             onDragOver={(e) => handleDesktopDragOver(e, index)}
                             onDragEnd={handleDesktopDragEnd}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
-                            onTouchCancel={handleTouchCancel}
                             className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all select-none ${
                                 draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
@@ -1413,9 +1417,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             onDragStart={(e) => handleDesktopDragStart(e, index)}
                             onDragOver={(e) => handleDesktopDragOver(e, index)}
                             onDragEnd={handleDesktopDragEnd}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
-                            onTouchCancel={handleTouchCancel}
                             className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
                                 draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
@@ -1666,45 +1667,52 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         }
     };
 
-    const handleTouchMove = (e) => {
-        // Only handle movement if actively dragging
-        if (isDragging && draggedRef.current !== null) {
-            // Prevent scrolling while dragging
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-            e.stopPropagation();
-            
-            const touch = e.touches[0];
-            const element = document.elementFromPoint(touch.clientX, touch.clientY);
-            
-            if (element) {
-                const itemElement = element.closest('[data-item-index]');
-                if (itemElement) {
-                    const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                    
-                    if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
-                        reorderItems(draggedRef.current, hoverIndex);
-                        draggedRef.current = hoverIndex;
+    // Attach document-level touch handlers when dragging
+    useEffect(() => {
+        if (!isDragging) return;
+        
+        const handleDocumentTouchMove = (e) => {
+            if (isDragging && draggedRef.current !== null) {
+                // Prevent scrolling while dragging
+                if (e.cancelable) {
+                    e.preventDefault();
+                }
+                
+                const touch = e.touches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                
+                if (element) {
+                    const itemElement = element.closest('[data-item-index]');
+                    if (itemElement) {
+                        const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
+                        
+                        if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
+                            reorderItems(draggedRef.current, hoverIndex);
+                            draggedRef.current = hoverIndex;
+                        }
                     }
                 }
             }
-        }
-    };
-
-    const handleTouchEnd = (e) => {
-        if (isDragging) {
-            draggedRef.current = null;
-            setDraggedItem(null);
-            setIsDragging(false);
-        }
-    };
-
-    const handleTouchCancel = (e) => {
-        draggedRef.current = null;
-        setDraggedItem(null);
-        setIsDragging(false);
-    };
+        };
+        
+        const handleDocumentTouchEnd = (e) => {
+            if (isDragging) {
+                draggedRef.current = null;
+                setDraggedItem(null);
+                setIsDragging(false);
+            }
+        };
+        
+        document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
+        document.addEventListener('touchend', handleDocumentTouchEnd);
+        document.addEventListener('touchcancel', handleDocumentTouchEnd);
+        
+        return () => {
+            document.removeEventListener('touchmove', handleDocumentTouchMove);
+            document.removeEventListener('touchend', handleDocumentTouchEnd);
+            document.removeEventListener('touchcancel', handleDocumentTouchEnd);
+        };
+    }, [isDragging]);
 
     // Cleanup on unmount (when switching tabs)
     useEffect(() => {
@@ -1775,9 +1783,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                         onDragStart={(e) => handleDesktopDragStart(e, index)}
                         onDragOver={(e) => handleDesktopDragOver(e, index)}
                         onDragEnd={handleDesktopDragEnd}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                        onTouchCancel={handleTouchCancel}
                         className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
                             draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                         }`}
