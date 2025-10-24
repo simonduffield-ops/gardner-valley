@@ -993,6 +993,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isLongPressing, setIsLongPressing] = useState(false);
+    const saveOrderTimer = useRef(null);
+    const pendingSave = useRef(false);
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
@@ -1100,7 +1102,25 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         showToast('Item deleted');
     };
 
-    const reorderItems = async (startIndex, endIndex) => {
+    // Save all items' sort order to backend (debounced)
+    const saveOrderToBackend = async (items) => {
+        if (!useBackend) return;
+        
+        try {
+            // Single batch update - only affected items
+            await Promise.all(
+                items.map((item, index) => 
+                    propertyAPI.updateListItem(item.id, { sort_order: index })
+                )
+            );
+            pendingSave.current = false;
+        } catch (error) {
+            console.error('Error saving order:', error);
+            showToast('Failed to save order', 'error');
+        }
+    };
+
+    const reorderItems = (startIndex, endIndex) => {
         const items = Array.from(data.lists[activeList]);
         const [removed] = items.splice(startIndex, 1);
         items.splice(endIndex, 0, removed);
@@ -1114,23 +1134,15 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             },
         });
 
+        // Debounce the save - wait until user stops dragging
         if (useBackend) {
-            // Only update items whose positions actually changed
-            // This is much more efficient than updating all items
-            const start = Math.min(startIndex, endIndex);
-            const end = Math.max(startIndex, endIndex);
-            const itemsToUpdate = items.slice(start, end + 1);
+            pendingSave.current = true;
+            clearTimeout(saveOrderTimer.current);
             
-            try {
-                await Promise.all(
-                    itemsToUpdate.map((item, idx) => 
-                        propertyAPI.updateListItem(item.id, { sort_order: start + idx })
-                    )
-                );
-            } catch (error) {
-                console.error('Error reordering items:', error);
-                showToast('Failed to save order', 'error');
-            }
+            // Save 300ms after last reorder (user stopped dragging)
+            saveOrderTimer.current = setTimeout(() => {
+                saveOrderToBackend(items);
+            }, 300);
         }
     };
 
@@ -1440,6 +1452,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isLongPressing, setIsLongPressing] = useState(false);
+    const saveOrderTimer = useRef(null);
+    const pendingSave = useRef(false);
 
     const listTypes = [
         { id: 'leaving', label: 'Leaving Checklist' },
@@ -1536,7 +1550,25 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         showToast('All items unchecked');
     };
 
-    const reorderItems = async (startIndex, endIndex) => {
+    // Save all items' sort order to backend (debounced)
+    const saveOrderToBackend = async (items) => {
+        if (!useBackend) return;
+        
+        try {
+            // Single batch update - only affected items
+            await Promise.all(
+                items.map((item, index) => 
+                    propertyAPI.updateListItem(item.id, { sort_order: index })
+                )
+            );
+            pendingSave.current = false;
+        } catch (error) {
+            console.error('Error saving order:', error);
+            showToast('Failed to save order', 'error');
+        }
+    };
+
+    const reorderItems = (startIndex, endIndex) => {
         const items = Array.from(data.lists[activeList]);
         const [removed] = items.splice(startIndex, 1);
         items.splice(endIndex, 0, removed);
@@ -1550,23 +1582,15 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             },
         });
 
+        // Debounce the save - wait until user stops dragging
         if (useBackend) {
-            // Only update items whose positions actually changed
-            // This is much more efficient than updating all items
-            const start = Math.min(startIndex, endIndex);
-            const end = Math.max(startIndex, endIndex);
-            const itemsToUpdate = items.slice(start, end + 1);
+            pendingSave.current = true;
+            clearTimeout(saveOrderTimer.current);
             
-            try {
-                await Promise.all(
-                    itemsToUpdate.map((item, idx) => 
-                        propertyAPI.updateListItem(item.id, { sort_order: start + idx })
-                    )
-                );
-            } catch (error) {
-                console.error('Error reordering items:', error);
-                showToast('Failed to save order', 'error');
-            }
+            // Save 300ms after last reorder (user stopped dragging)
+            saveOrderTimer.current = setTimeout(() => {
+                saveOrderToBackend(items);
+            }, 300);
         }
     };
 
