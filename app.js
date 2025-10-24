@@ -992,6 +992,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const draggedRef = useRef(null);
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isLongPressing, setIsLongPressing] = useState(false);
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
@@ -1154,6 +1155,9 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         // Prevent text selection
         e.preventDefault();
         
+        // Set long-pressing state immediately to prevent scrolling
+        setIsLongPressing(true);
+        
         longPressTimer.current = setTimeout(() => {
             draggedRef.current = index;
             setDraggedItem(index);
@@ -1167,17 +1171,20 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const handleLongPressEnd = () => {
         clearTimeout(longPressTimer.current);
+        setIsLongPressing(false);
     };
 
     const handleTouchMove = (e) => {
-        if (!isDragging || draggedRef.current === null) {
-            // Not dragging - allow normal scrolling
-            return;
+        // Prevent scrolling during long press or dragging
+        if (isLongPressing || isDragging) {
+            e.preventDefault();
+            e.stopPropagation();
         }
         
-        // Only prevent default when actively dragging
-        e.preventDefault();
-        e.stopPropagation();
+        if (!isDragging || draggedRef.current === null) {
+            // Not dragging yet - just preventing scroll during long press
+            return;
+        }
         
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -1200,6 +1207,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         draggedRef.current = null;
         setDraggedItem(null);
         setIsDragging(false);
+        setIsLongPressing(false);
     };
 
     // Desktop drag handlers
@@ -1324,7 +1332,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 cursor: draggedItem === index ? 'grabbing' : 'grab',
                                 WebkitUserSelect: 'none',
                                 userSelect: 'none',
-                                touchAction: isDragging ? 'none' : 'auto'
+                                touchAction: (isDragging || isLongPressing) ? 'none' : 'auto'
                             }}
                         >
                             <div className="text-gray-400">
@@ -1363,7 +1371,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 cursor: draggedItem === index ? 'grabbing' : 'grab',
                                 WebkitUserSelect: 'none',
                                 userSelect: 'none',
-                                touchAction: isDragging ? 'none' : 'auto'
+                                touchAction: (isDragging || isLongPressing) ? 'none' : 'auto'
                             }}
                         >
                             <div className="text-gray-400">
@@ -1428,6 +1436,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const draggedRef = useRef(null);
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isLongPressing, setIsLongPressing] = useState(false);
 
     const listTypes = [
         { id: 'leaving', label: 'Leaving Checklist' },
@@ -1579,6 +1588,9 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         // Prevent text selection
         e.preventDefault();
         
+        // Set long-pressing state immediately to prevent scrolling
+        setIsLongPressing(true);
+        
         longPressTimer.current = setTimeout(() => {
             draggedRef.current = index;
             setDraggedItem(index);
@@ -1591,17 +1603,20 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     const handleLongPressEnd = () => {
         clearTimeout(longPressTimer.current);
+        setIsLongPressing(false);
     };
 
     const handleTouchMove = (e) => {
-        if (!isDragging || draggedRef.current === null) {
-            // Not dragging - allow normal scrolling
-            return;
+        // Prevent scrolling during long press or dragging
+        if (isLongPressing || isDragging) {
+            e.preventDefault();
+            e.stopPropagation();
         }
         
-        // Only prevent default when actively dragging
-        e.preventDefault();
-        e.stopPropagation();
+        if (!isDragging || draggedRef.current === null) {
+            // Not dragging yet - just preventing scroll during long press
+            return;
+        }
         
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -1624,6 +1639,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         draggedRef.current = null;
         setDraggedItem(null);
         setIsDragging(false);
+        setIsLongPressing(false);
     };
 
     // Desktop drag handlers
@@ -1716,7 +1732,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                             cursor: draggedItem === index ? 'grabbing' : 'grab',
                             WebkitUserSelect: 'none',
                             userSelect: 'none',
-                            touchAction: isDragging ? 'none' : 'auto'
+                            touchAction: (isDragging || isLongPressing) ? 'none' : 'auto'
                         }}
                     >
                         <div className="text-gray-400">
