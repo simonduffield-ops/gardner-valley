@@ -467,45 +467,47 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     return (
-        <div className="p-4">
+        <div className="p-4 pb-8">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">Property Map</h2>
                 <button
                     onClick={() => setShowAddMarker(!showAddMarker)}
                     className={`p-2 rounded-full ${
                         showAddMarker ? 'bg-red-500' : 'bg-emerald-500'
-                    } text-white shadow-lg`}
+                    } text-white shadow-lg transition-colors`}
                 >
                     {showAddMarker ? <Icons.X /> : <Icons.Plus />}
                 </button>
             </div>
 
             {showAddMarker && (
-                <div className="bg-white p-4 rounded-lg shadow mb-4">
-                    <h3 className="font-semibold mb-2">Add New Marker</h3>
+                <div className="bg-white p-4 rounded-lg shadow mb-4 border border-emerald-200">
+                    <h3 className="font-semibold mb-3 text-lg">Add New Marker</h3>
                     <input
                         type="text"
-                        placeholder="Label"
+                        placeholder="Label (e.g., 'Apple Tree')"
                         value={newMarker.label}
                         onChange={(e) => setNewMarker({ ...newMarker, label: e.target.value })}
-                        className="w-full p-2 border rounded mb-2"
+                        className="w-full p-3 border rounded-lg mb-3 text-base"
                     />
                     <select
                         value={newMarker.type}
                         onChange={(e) => setNewMarker({ ...newMarker, type: e.target.value })}
-                        className="w-full p-2 border rounded mb-2"
+                        className="w-full p-3 border rounded-lg mb-3 text-base"
                     >
-                        <option value="tree">Tree</option>
-                        <option value="building">Building</option>
-                        <option value="irrigation">Irrigation</option>
-                        <option value="electrical">Electrical</option>
-                        <option value="equipment">Equipment</option>
+                        <option value="tree">🌳 Tree</option>
+                        <option value="building">🏠 Building</option>
+                        <option value="irrigation">💧 Irrigation</option>
+                        <option value="electrical">⚡ Electrical</option>
+                        <option value="equipment">🔧 Equipment</option>
                     </select>
-                    <p className="text-sm text-gray-600 mb-2">Tap on the map to place marker</p>
+                    <p className="text-sm text-gray-600 mb-3 bg-emerald-50 p-2 rounded">
+                        👆 Tap on the map to place your marker
+                    </p>
                     <button
                         onClick={addMarker}
                         disabled={!newMarker.label}
-                        className="w-full bg-emerald-500 text-white py-2 rounded disabled:bg-gray-300"
+                        className="w-full bg-emerald-500 text-white py-3 rounded-lg font-semibold text-base disabled:bg-gray-300 active:scale-95 transition-transform"
                     >
                         Add Marker
                     </button>
@@ -515,18 +517,27 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
             <div
                 ref={mapRef}
                 onClick={handleMapClick}
-                className="relative bg-gradient-to-br from-green-100 to-green-200 rounded-lg shadow-lg overflow-hidden"
-                style={{ height: '500px' }}
+                className="relative rounded-lg shadow-lg overflow-hidden touch-manipulation"
+                style={{ 
+                    height: 'calc(100vh - 280px)',
+                    minHeight: '400px',
+                    maxHeight: '600px',
+                    backgroundImage: 'url(gardner-valley-map.png)',
+                    backgroundSize: 'contain',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundColor: '#f5f5f5'
+                }}
             >
                 {data.mapMarkers.map(marker => (
                     <div
                         key={marker.id}
-                        className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 z-10"
                         style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
                     >
-                        <div className="flex flex-col items-center">
-                            <div className={`w-6 h-6 ${markerColors[marker.type]} rounded-full shadow-lg border-2 border-white`} />
-                            <div className="bg-white px-2 py-1 rounded shadow mt-1 text-xs whitespace-nowrap">
+                        <div className="flex flex-col items-center cursor-pointer">
+                            <div className={`w-8 h-8 ${markerColors[marker.type]} rounded-full shadow-lg border-3 border-white`} />
+                            <div className="bg-white px-2 py-1 rounded-md shadow-md mt-1 text-xs font-medium whitespace-nowrap max-w-[120px] truncate">
                                 {marker.label}
                             </div>
                             <button
@@ -534,7 +545,7 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
                                     e.stopPropagation();
                                     setConfirmDelete(marker.id);
                                 }}
-                                className="mt-1 bg-red-500 text-white p-1 rounded text-xs"
+                                className="mt-1 bg-red-500 text-white p-1.5 rounded-md text-xs shadow-md active:scale-95 transition-transform"
                             >
                                 <Icons.Trash />
                             </button>
@@ -543,13 +554,13 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
                 ))}
             </div>
 
-            <div className="mt-4 bg-white p-4 rounded-lg shadow">
-                <h3 className="font-semibold mb-2">Legend</h3>
-                <div className="flex flex-wrap gap-2">
+            <div className="mt-4 bg-white p-4 rounded-lg shadow-md border border-gray-100">
+                <h3 className="font-semibold mb-3 text-base">Legend</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {Object.entries(markerColors).map(([type, color]) => (
-                        <div key={type} className="flex items-center gap-2">
-                            <div className={`w-4 h-4 ${color} rounded-full`} />
-                            <span className="text-sm capitalize">{type}</span>
+                        <div key={type} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+                            <div className={`w-5 h-5 ${color} rounded-full shadow-sm border border-white`} />
+                            <span className="text-sm capitalize font-medium">{type}</span>
                         </div>
                     ))}
                 </div>
