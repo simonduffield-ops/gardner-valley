@@ -990,7 +990,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddSection, setShowAddSection] = useState(false);
     const [newSectionName, setNewSectionName] = useState('');
     const draggedRef = useRef(null);
-    const containerRef = useRef(null);
+    const longPressTimer = useRef(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
@@ -1151,20 +1152,25 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setDraggedItem(index);
     };
 
-    const handleDragEnd = () => {
-        setDraggedItem(null);
-        setTouchStart(null);
-        setTouchCurrent(null);
+    // Long press handlers for mobile drag on entire item
+    const handleLongPressStart = (e, index) => {
+        longPressTimer.current = setTimeout(() => {
+            draggedRef.current = index;
+            setDraggedItem(index);
+            setIsDragging(true);
+            // Haptic feedback if available
+            if (window.navigator.vibrate) {
+                window.navigator.vibrate(50);
+            }
+        }, 500); // 500ms long press
     };
 
-    // Touch handlers for mobile (iOS) - ListsView
-    const handleTouchStart = useCallback((e, index) => {
-        draggedRef.current = index;
-        setDraggedItem(index);
-    }, []);
+    const handleLongPressEnd = () => {
+        clearTimeout(longPressTimer.current);
+    };
 
-    const handleTouchMove = useCallback((e) => {
-        if (draggedRef.current === null) return;
+    const handleTouchMove = (e) => {
+        if (!isDragging || draggedRef.current === null) return;
         
         e.preventDefault();
         
@@ -1182,12 +1188,27 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 }
             }
         }
-    }, [reorderItems]);
+    };
 
-    const handleTouchEnd = useCallback(() => {
+    const handleDragEnd = () => {
+        clearTimeout(longPressTimer.current);
         draggedRef.current = null;
         setDraggedItem(null);
-    }, []);
+        setIsDragging(false);
+    };
+
+    // Arrow buttons as fallback
+    const moveItemUp = async (index) => {
+        if (index === 0) return;
+        await reorderItems(index, index - 1);
+        showToast('Item moved up');
+    };
+
+    const moveItemDown = async (index) => {
+        if (index === data.lists[activeList].length - 1) return;
+        await reorderItems(index, index + 1);
+        showToast('Item moved down');
+    };
 
     return (
         <div className="p-4">
@@ -1271,28 +1292,40 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             </div>
 
             {/* Items */}
-            <div ref={containerRef} className="space-y-2" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+            <div className="space-y-2" onTouchMove={handleTouchMove} onTouchEnd={handleDragEnd}>
                 {data.lists[activeList].map((item, index) => (
                     item.is_section ? (
                         // Section Header
                         <div
                             key={item.id}
                             data-item-index={index}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, index)}
-                            onDragOver={(e) => handleDragOver(e, index)}
-                            onDragEnd={handleDragEnd}
-                            className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
-                                draggedItem === index ? 'opacity-50' : ''
+                            onTouchStart={(e) => handleLongPressStart(e, index)}
+                            onTouchEnd={handleLongPressEnd}
+                            className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-2 transition-all ${
+                                draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
                         >
-                            <div 
-                                className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
-                                onTouchStart={(e) => handleTouchStart(e, index)}
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                </svg>
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    onClick={() => moveItemUp(index)}
+                                    disabled={index === 0}
+                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
+                                    title="Move up"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => moveItemDown(index)}
+                                    disabled={index === data.lists[activeList].length - 1}
+                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
+                                    title="Move down"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
                             </div>
                             <div className="flex-1 flex items-center gap-2">
                                 <span className="text-emerald-600 text-lg">📑</span>
@@ -1312,21 +1345,33 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         <div
                             key={item.id}
                             data-item-index={index}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, index)}
-                            onDragOver={(e) => handleDragOver(e, index)}
-                            onDragEnd={handleDragEnd}
-                            className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
-                                draggedItem === index ? 'opacity-50' : ''
+                            onTouchStart={(e) => handleLongPressStart(e, index)}
+                            onTouchEnd={handleLongPressEnd}
+                            className={`bg-white p-4 rounded-lg shadow flex items-center gap-2 transition-all ${
+                                draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
                         >
-                            <div 
-                                className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
-                                onTouchStart={(e) => handleTouchStart(e, index)}
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                </svg>
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    onClick={() => moveItemUp(index)}
+                                    disabled={index === 0}
+                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
+                                    title="Move up"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => moveItemDown(index)}
+                                    disabled={index === data.lists[activeList].length - 1}
+                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
+                                    title="Move down"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
                             </div>
                             <button
                                 onClick={() => toggleItem(item.id)}
@@ -1383,7 +1428,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
     const draggedRef = useRef(null);
-    const containerRef = useRef(null);
+    const longPressTimer = useRef(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     const listTypes = [
         { id: 'leaving', label: 'Leaving Checklist' },
@@ -1531,20 +1577,24 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setDraggedItem(index);
     };
 
-    const handleDragEnd = () => {
-        setDraggedItem(null);
-        setTouchStart(null);
-        setTouchCurrent(null);
+    // Long press handlers for mobile drag on entire item
+    const handleLongPressStart = (e, index) => {
+        longPressTimer.current = setTimeout(() => {
+            draggedRef.current = index;
+            setDraggedItem(index);
+            setIsDragging(true);
+            if (window.navigator.vibrate) {
+                window.navigator.vibrate(50);
+            }
+        }, 500);
     };
 
-    // Touch handlers for mobile (iOS) - ReferenceListsView
-    const handleTouchStart = useCallback((e, index) => {
-        draggedRef.current = index;
-        setDraggedItem(index);
-    }, []);
+    const handleLongPressEnd = () => {
+        clearTimeout(longPressTimer.current);
+    };
 
-    const handleTouchMove = useCallback((e) => {
-        if (draggedRef.current === null) return;
+    const handleTouchMove = (e) => {
+        if (!isDragging || draggedRef.current === null) return;
         
         e.preventDefault();
         
@@ -1562,12 +1612,27 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                 }
             }
         }
-    }, [reorderItems]);
+    };
 
-    const handleTouchEnd = useCallback(() => {
+    const handleDragEnd = () => {
+        clearTimeout(longPressTimer.current);
         draggedRef.current = null;
         setDraggedItem(null);
-    }, []);
+        setIsDragging(false);
+    };
+
+    // Arrow buttons as fallback
+    const moveItemUp = async (index) => {
+        if (index === 0) return;
+        await reorderItems(index, index - 1);
+        showToast('Item moved up');
+    };
+
+    const moveItemDown = async (index) => {
+        if (index === data.lists[activeList].length - 1) return;
+        await reorderItems(index, index + 1);
+        showToast('Item moved down');
+    };
 
     return (
         <div className="p-4">
@@ -1621,26 +1686,38 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             </div>
 
             {/* Items - Checkboxes that stay visible */}
-            <div ref={containerRef} className="space-y-2" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+            <div className="space-y-2" onTouchMove={handleTouchMove} onTouchEnd={handleDragEnd}>
                 {data.lists[activeList].map((item, index) => (
                     <div
                         key={item.id}
                         data-item-index={index}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, index)}
-                        onDragOver={(e) => handleDragOver(e, index)}
-                        onDragEnd={handleDragEnd}
-                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 cursor-move active:opacity-50 transition-opacity ${
-                            draggedItem === index ? 'opacity-50' : ''
+                        onTouchStart={(e) => handleLongPressStart(e, index)}
+                        onTouchEnd={handleLongPressEnd}
+                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-2 transition-all ${
+                            draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                         }`}
                     >
-                        <div 
-                            className="text-gray-400 cursor-grab active:cursor-grabbing drag-handle"
-                            onTouchStart={(e) => handleTouchStart(e, index)}
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                            </svg>
+                        <div className="flex flex-col gap-1">
+                            <button
+                                onClick={() => moveItemUp(index)}
+                                disabled={index === 0}
+                                className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
+                                title="Move up"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                </svg>
+                            </button>
+                            <button
+                                onClick={() => moveItemDown(index)}
+                                disabled={index === data.lists[activeList].length - 1}
+                                className="text-gray-400 hover:text-gray-600 disabled:opacity-30 p-0.5"
+                                title="Move down"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
                         </div>
                         <button
                             onClick={() => toggleItem(item.id)}
