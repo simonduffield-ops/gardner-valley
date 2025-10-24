@@ -1326,7 +1326,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 cursor: draggedItem === index ? 'grabbing' : 'grab',
                                 WebkitUserSelect: 'none',
                                 userSelect: 'none',
-                                touchAction: 'none'
+                                touchAction: isDragging ? 'none' : 'auto'
                             }}
                         >
                             <div className="text-gray-400">
@@ -1365,7 +1365,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 cursor: draggedItem === index ? 'grabbing' : 'grab',
                                 WebkitUserSelect: 'none',
                                 userSelect: 'none',
-                                touchAction: 'none'
+                                touchAction: isDragging ? 'none' : 'auto'
                             }}
                         >
                             <div className="text-gray-400">
@@ -1718,7 +1718,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                             cursor: draggedItem === index ? 'grabbing' : 'grab',
                             WebkitUserSelect: 'none',
                             userSelect: 'none',
-                            touchAction: 'none'
+                            touchAction: isDragging ? 'none' : 'auto'
                         }}
                     >
                         <div className="text-gray-400">
