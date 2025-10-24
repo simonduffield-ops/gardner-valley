@@ -1039,9 +1039,9 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const touchStartY = useRef(0);
+    const touchStartX = useRef(0);
     const saveOrderTimer = useRef(null);
     const pendingSave = useRef(false);
-    const containerRef = useRef(null);
 
     const listTypes = [
         { id: 'shopping', label: 'Shopping' },
@@ -1213,7 +1213,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - completely refactored
+    // Mobile touch handlers - Safari-compatible version
     const handleTouchStart = (e, index) => {
         // Don't interfere with button clicks
         if (e.target.closest('button')) {
@@ -1222,6 +1222,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
         const touch = e.touches[0];
         touchStartY.current = touch.clientY;
+        touchStartX.current = touch.clientX;
         
         longPressTimer.current = setTimeout(() => {
             // Start drag after long press
@@ -1233,17 +1234,18 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             if (window.navigator.vibrate) {
                 window.navigator.vibrate(50);
             }
-        }, 300); // 300ms for better responsiveness
+        }, 300);
     };
 
     const handleTouchMove = (e, index) => {
+        const touch = e.touches[0];
+        const deltaY = Math.abs(touch.clientY - touchStartY.current);
+        const deltaX = Math.abs(touch.clientX - touchStartX.current);
+        
         if (!isDragging && longPressTimer.current) {
-            // Check if user scrolled before long press completed
-            const touch = e.touches[0];
-            const deltaY = Math.abs(touch.clientY - touchStartY.current);
-            
-            if (deltaY > 10) {
-                // User is scrolling, cancel the long press
+            // Check if user is scrolling (vertical movement)
+            if (deltaY > 10 && deltaY > deltaX) {
+                // User is scrolling vertically, cancel the long press
                 clearTimeout(longPressTimer.current);
                 longPressTimer.current = null;
                 return;
@@ -1254,10 +1256,12 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             return;
         }
 
-        // Prevent scrolling while dragging
-        e.preventDefault();
+        // Prevent scrolling while actively dragging
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+        e.stopPropagation();
         
-        const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
         
         if (element) {
@@ -1293,25 +1297,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setDraggedItem(null);
         setIsDragging(false);
     };
-
-    // Add touch event listeners with passive: false for preventDefault to work
-    useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const handleTouchMovePassive = (e) => {
-            if (isDragging) {
-                e.preventDefault();
-            }
-        };
-
-        // Add non-passive listener to allow preventDefault
-        container.addEventListener('touchmove', handleTouchMovePassive, { passive: false });
-
-        return () => {
-            container.removeEventListener('touchmove', handleTouchMovePassive);
-        };
-    }, [isDragging]);
 
     return (
         <div className="p-4">
@@ -1395,7 +1380,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             </div>
 
             {/* Items */}
-            <div className="space-y-2" ref={containerRef}>
+            <div className="space-y-2">
                 {data.lists[activeList].map((item, index) => (
                     item.is_section ? (
                         // Section Header
@@ -1416,8 +1401,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             style={{
                                 cursor: draggedItem === index ? 'grabbing' : 'grab',
                                 WebkitUserSelect: 'none',
-                                userSelect: 'none',
-                                touchAction: 'none'
+                                userSelect: 'none'
                             }}
                         >
                             <div className="text-gray-400">
@@ -1457,8 +1441,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             style={{
                                 cursor: draggedItem === index ? 'grabbing' : 'grab',
                                 WebkitUserSelect: 'none',
-                                userSelect: 'none',
-                                touchAction: 'none'
+                                userSelect: 'none'
                             }}
                         >
                             <div className="text-gray-400">
@@ -1524,9 +1507,9 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const touchStartY = useRef(0);
+    const touchStartX = useRef(0);
     const saveOrderTimer = useRef(null);
     const pendingSave = useRef(false);
-    const containerRef = useRef(null);
 
     const listTypes = [
         { id: 'leaving', label: 'Leaving Checklist' },
@@ -1687,7 +1670,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - completely refactored
+    // Mobile touch handlers - Safari-compatible version
     const handleTouchStart = (e, index) => {
         // Don't interfere with button clicks
         if (e.target.closest('button')) {
@@ -1696,6 +1679,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
         const touch = e.touches[0];
         touchStartY.current = touch.clientY;
+        touchStartX.current = touch.clientX;
         
         longPressTimer.current = setTimeout(() => {
             // Start drag after long press
@@ -1707,17 +1691,18 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             if (window.navigator.vibrate) {
                 window.navigator.vibrate(50);
             }
-        }, 300); // 300ms for better responsiveness
+        }, 300);
     };
 
     const handleTouchMove = (e, index) => {
+        const touch = e.touches[0];
+        const deltaY = Math.abs(touch.clientY - touchStartY.current);
+        const deltaX = Math.abs(touch.clientX - touchStartX.current);
+        
         if (!isDragging && longPressTimer.current) {
-            // Check if user scrolled before long press completed
-            const touch = e.touches[0];
-            const deltaY = Math.abs(touch.clientY - touchStartY.current);
-            
-            if (deltaY > 10) {
-                // User is scrolling, cancel the long press
+            // Check if user is scrolling (vertical movement)
+            if (deltaY > 10 && deltaY > deltaX) {
+                // User is scrolling vertically, cancel the long press
                 clearTimeout(longPressTimer.current);
                 longPressTimer.current = null;
                 return;
@@ -1728,10 +1713,12 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             return;
         }
 
-        // Prevent scrolling while dragging
-        e.preventDefault();
+        // Prevent scrolling while actively dragging
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+        e.stopPropagation();
         
-        const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
         
         if (element) {
@@ -1767,25 +1754,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         setDraggedItem(null);
         setIsDragging(false);
     };
-
-    // Add touch event listeners with passive: false for preventDefault to work
-    useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const handleTouchMovePassive = (e) => {
-            if (isDragging) {
-                e.preventDefault();
-            }
-        };
-
-        // Add non-passive listener to allow preventDefault
-        container.addEventListener('touchmove', handleTouchMovePassive, { passive: false });
-
-        return () => {
-            container.removeEventListener('touchmove', handleTouchMovePassive);
-        };
-    }, [isDragging]);
 
     return (
         <div className="p-4">
@@ -1839,7 +1807,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             </div>
 
             {/* Items - Checkboxes that stay visible */}
-            <div className="space-y-2" ref={containerRef}>
+            <div className="space-y-2">
                 {data.lists[activeList].map((item, index) => (
                     <div
                         key={item.id}
@@ -1858,8 +1826,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                         style={{
                             cursor: draggedItem === index ? 'grabbing' : 'grab',
                             WebkitUserSelect: 'none',
-                            userSelect: 'none',
-                            touchAction: 'none'
+                            userSelect: 'none'
                         }}
                     >
                         <div className="text-gray-400">
