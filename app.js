@@ -1082,6 +1082,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [draggedItem, setDraggedItem] = useState(null);
     const [showAddSection, setShowAddSection] = useState(false);
     const [newSectionName, setNewSectionName] = useState('');
+    const [editingItem, setEditingItem] = useState(null);
     const draggedRef = useRef(null);
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -1255,6 +1256,48 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             deletedItem,
                             ...data.lists[activeList].slice(deletedIndex)
                         ],
+                    },
+                });
+            }
+        }
+    };
+
+    const updateItem = async () => {
+        if (!editingItem.text.trim()) return;
+        
+        const oldItem = data.lists[activeList].find(i => i.id === editingItem.id);
+        
+        // Optimistic update - update UI immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: data.lists[activeList].map(i =>
+                    i.id === editingItem.id ? editingItem : i
+                ),
+            },
+        });
+        
+        setEditingItem(null);
+        showToast('Item updated');
+        
+        // Sync with backend in background
+        if (useBackend) {
+            try {
+                await propertyAPI.updateListItem(editingItem.id, {
+                    text: editingItem.text,
+                });
+            } catch (error) {
+                console.error('Error updating item:', error);
+                showToast('Failed to update item', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: data.lists[activeList].map(i =>
+                            i.id === editingItem.id ? oldItem : i
+                        ),
                     },
                 });
             }
@@ -1523,18 +1566,15 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                 </svg>
                             </div>
-                            <div className="flex-1 flex items-center gap-2">
+                            <div 
+                                onClick={() => setEditingItem({ ...item })}
+                                className="flex-1 flex items-center gap-2 cursor-pointer"
+                            >
                                 <span className="text-emerald-600 text-lg">📑</span>
                                 <span className="font-bold text-emerald-700 uppercase text-sm tracking-wide">
                                     {item.text}
                                 </span>
                             </div>
-                            <button
-                                onClick={() => setConfirmDelete(item.id)}
-                                className="text-red-500 p-1 hover:bg-red-50 rounded"
-                            >
-                                <Icons.Trash />
-                            </button>
                         </div>
                     ) : (
                         // Regular Item
@@ -1575,7 +1615,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 )}
                             </button>
                             <span
-                                className={`flex-1 ${
+                                onClick={() => setEditingItem({ ...item })}
+                                className={`flex-1 cursor-pointer ${
                                     item.completed
                                         ? 'line-through text-gray-400'
                                         : 'text-gray-800'
@@ -1583,12 +1624,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             >
                                 {item.text}
                             </span>
-                            <button
-                                onClick={() => setConfirmDelete(item.id)}
-                                className="text-red-500 p-1"
-                            >
-                                <Icons.Trash />
-                            </button>
                         </div>
                     )
                 ))}
@@ -1598,6 +1633,51 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     </div>
                 )}
             </div>
+
+            {/* Edit Item Dialog */}
+            {editingItem && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                        <h3 className="font-semibold mb-4 text-xl">
+                            {editingItem.is_section ? 'Edit Section' : 'Edit Item'}
+                        </h3>
+                        <input
+                            type="text"
+                            placeholder={editingItem.is_section ? "Section name" : "Item text"}
+                            value={editingItem.text}
+                            onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
+                            onKeyPress={(e) => e.key === 'Enter' && updateItem()}
+                            className="w-full p-2 border rounded mb-4"
+                            autoFocus
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={updateItem}
+                                disabled={!editingItem.text.trim()}
+                                className="flex-1 bg-emerald-500 text-white py-2 rounded disabled:bg-gray-300"
+                            >
+                                Save Changes
+                            </button>
+                            <button
+                                onClick={() => setEditingItem(null)}
+                                className="flex-1 bg-gray-300 text-gray-700 py-2 rounded"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setConfirmDelete(editingItem.id);
+                                setEditingItem(null);
+                            }}
+                            className="w-full mt-4 bg-red-500 text-white py-2 rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Icons.Trash />
+                            {editingItem.is_section ? 'Delete Section' : 'Delete Item'}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Confirm Delete Dialog */}
             {confirmDelete && (
