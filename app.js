@@ -648,9 +648,15 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
         if (!newMarker.label) return;
         
         if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.addMapMarker(newMarker);
-            });
+            try {
+                const addedMarker = await propertyAPI.addMapMarker(newMarker);
+                // Optimistic update - add to UI immediately
+                setData({ ...data, mapMarkers: [...data.mapMarkers, addedMarker] });
+            } catch (error) {
+                console.error('Error adding marker:', error);
+                showToast('Failed to add marker', 'error');
+                return;
+            }
         } else {
             const marker = {
                 id: generateId(),
@@ -665,19 +671,30 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const deleteMarker = async (id) => {
-        if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.deleteMapMarker(id);
-            });
-        } else {
-            setData({
-                ...data,
-                mapMarkers: data.mapMarkers.filter(m => m.id !== id),
-            });
-        }
+        const deletedMarker = data.mapMarkers.find(m => m.id === id);
+        
+        // Optimistic update - remove from UI immediately
+        setData({
+            ...data,
+            mapMarkers: data.mapMarkers.filter(m => m.id !== id),
+        });
         
         setConfirmDelete(null);
         showToast('Marker deleted');
+        
+        if (useBackend) {
+            try {
+                await propertyAPI.deleteMapMarker(id);
+            } catch (error) {
+                console.error('Error deleting marker:', error);
+                showToast('Failed to delete marker', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    mapMarkers: [...data.mapMarkers, deletedMarker],
+                });
+            }
+        }
     };
 
     return (
@@ -831,9 +848,15 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
         if (!newContact.name || !newContact.value) return;
         
         if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.addContact(newContact);
-            });
+            try {
+                const addedContact = await propertyAPI.addContact(newContact);
+                // Optimistic update - add to UI immediately
+                setData({ ...data, contacts: [...data.contacts, addedContact] });
+            } catch (error) {
+                console.error('Error adding contact:', error);
+                showToast('Failed to add contact', 'error');
+                return;
+            }
         } else {
             const contact = { id: generateId(), ...newContact };
             setData({ ...data, contacts: [...data.contacts, contact] });
@@ -845,33 +868,57 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const deleteContact = async (id) => {
-        if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.deleteContact(id);
-            });
-        } else {
-            setData({
-                ...data,
-                contacts: data.contacts.filter(c => c.id !== id),
-            });
-        }
+        const deletedContact = data.contacts.find(c => c.id === id);
+        
+        // Optimistic update - remove from UI immediately
+        setData({
+            ...data,
+            contacts: data.contacts.filter(c => c.id !== id),
+        });
         
         setConfirmDelete(null);
         showToast('Contact deleted');
+        
+        if (useBackend) {
+            try {
+                await propertyAPI.deleteContact(id);
+            } catch (error) {
+                console.error('Error deleting contact:', error);
+                showToast('Failed to delete contact', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    contacts: [...data.contacts, deletedContact],
+                });
+            }
+        }
     };
 
     const updateContact = async (id, field, value) => {
+        const oldValue = data.contacts.find(c => c.id === id)?.[field];
+        
+        // Optimistic update - update UI immediately
+        setData({
+            ...data,
+            contacts: data.contacts.map(c =>
+                c.id === id ? { ...c, [field]: value } : c
+            ),
+        });
+        
         if (useBackend) {
-            await updateData(async () => {
+            try {
                 await propertyAPI.updateContact(id, { [field]: value });
-            });
-        } else {
-            setData({
-                ...data,
-                contacts: data.contacts.map(c =>
-                    c.id === id ? { ...c, [field]: value } : c
-                ),
-            });
+            } catch (error) {
+                console.error('Error updating contact:', error);
+                showToast('Failed to update contact', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    contacts: data.contacts.map(c =>
+                        c.id === id ? { ...c, [field]: oldValue } : c
+                    ),
+                });
+            }
         }
     };
 
@@ -1062,9 +1109,21 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         };
         
         if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.addListItem(activeList, newItem);
-            });
+            try {
+                const addedItem = await propertyAPI.addListItem(activeList, newItem);
+                // Optimistic update - add to UI immediately
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: [...data.lists[activeList], addedItem],
+                    },
+                });
+            } catch (error) {
+                console.error('Error adding item:', error);
+                showToast('Failed to add item', 'error');
+                return;
+            }
         } else {
             newItem.id = generateId();
             setData({
@@ -1090,9 +1149,21 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         };
         
         if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.addListItem(activeList, newSection);
-            });
+            try {
+                const addedSection = await propertyAPI.addListItem(activeList, newSection);
+                // Optimistic update - add to UI immediately
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: [...data.lists[activeList], addedSection],
+                    },
+                });
+            } catch (error) {
+                console.error('Error adding section:', error);
+                showToast('Failed to add section', 'error');
+                return;
+            }
         } else {
             newSection.id = generateId();
             setData({
@@ -1126,9 +1197,10 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             },
         });
         
-        // Sync with backend in background
+        // Sync with backend in background WITHOUT reloading all data
         if (useBackend) {
             try {
+                // Just update the backend, no need to reload everything
                 await propertyAPI.updateListItem(id, { completed: newValue });
             } catch (error) {
                 console.error('Error updating item:', error);
@@ -1563,9 +1635,21 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         };
         
         if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.addListItem(activeList, newItem);
-            });
+            try {
+                const addedItem = await propertyAPI.addListItem(activeList, newItem);
+                // Optimistic update - add to UI immediately
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: [...data.lists[activeList], addedItem],
+                    },
+                });
+            } catch (error) {
+                console.error('Error adding item:', error);
+                showToast('Failed to add item', 'error');
+                return;
+            }
         } else {
             newItem.id = generateId();
             setData({
@@ -1598,9 +1682,10 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             },
         });
         
-        // Sync with backend in background
+        // Sync with backend in background WITHOUT reloading all data
         if (useBackend) {
             try {
+                // Just update the backend, no need to reload everything
                 await propertyAPI.updateListItem(id, { checked: newValue });
             } catch (error) {
                 console.error('Error updating item:', error);
@@ -2067,9 +2152,20 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
         if (!newBooking.startDate || !newBooking.endDate || !newBooking.guest) return;
         
         if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.addCalendarBooking(newBooking);
-            });
+            try {
+                const addedBooking = await propertyAPI.addCalendarBooking(newBooking);
+                // Optimistic update - add to UI immediately
+                setData({
+                    ...data,
+                    calendar: [...data.calendar, addedBooking].sort((a, b) =>
+                        new Date(a.startDate) - new Date(b.startDate)
+                    ),
+                });
+            } catch (error) {
+                console.error('Error adding booking:', error);
+                showToast('Failed to add booking', 'error');
+                return;
+            }
         } else {
             const booking = {
                 id: generateId(),
@@ -2092,42 +2188,68 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     const updateBooking = async () => {
         if (!editingBooking.startDate || !editingBooking.endDate || !editingBooking.guest) return;
         
+        const oldBooking = data.calendar.find(b => b.id === editingBooking.id);
+        
+        // Optimistic update - update UI immediately
+        setData({
+            ...data,
+            calendar: data.calendar.map(b => 
+                b.id === editingBooking.id ? editingBooking : b
+            ).sort((a, b) => new Date(a.startDate) - new Date(b.startDate)),
+        });
+        
+        setEditingBooking(null);
+        showToast('Booking updated successfully!');
+        
         if (useBackend) {
-            await updateData(async () => {
+            try {
                 await propertyAPI.updateCalendarBooking(editingBooking.id, {
                     startDate: editingBooking.startDate,
                     endDate: editingBooking.endDate,
                     guest: editingBooking.guest,
                     status: editingBooking.status,
                 });
-            });
-        } else {
-            setData({
-                ...data,
-                calendar: data.calendar.map(b => 
-                    b.id === editingBooking.id ? editingBooking : b
-                ).sort((a, b) => new Date(a.startDate) - new Date(b.startDate)),
-            });
+            } catch (error) {
+                console.error('Error updating booking:', error);
+                showToast('Failed to update booking', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    calendar: data.calendar.map(b => 
+                        b.id === editingBooking.id ? oldBooking : b
+                    ).sort((a, b) => new Date(a.startDate) - new Date(b.startDate)),
+                });
+            }
         }
-        
-        setEditingBooking(null);
-        showToast('Booking updated successfully!');
     };
 
     const deleteBooking = async (id) => {
-        if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.deleteCalendarBooking(id);
-            });
-        } else {
-            setData({
-                ...data,
-                calendar: data.calendar.filter(b => b.id !== id),
-            });
-        }
+        const deletedBooking = data.calendar.find(b => b.id === id);
+        
+        // Optimistic update - remove from UI immediately
+        setData({
+            ...data,
+            calendar: data.calendar.filter(b => b.id !== id),
+        });
         
         setConfirmDelete(null);
         showToast('Booking deleted');
+        
+        if (useBackend) {
+            try {
+                await propertyAPI.deleteCalendarBooking(id);
+            } catch (error) {
+                console.error('Error deleting booking:', error);
+                showToast('Failed to delete booking', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    calendar: [...data.calendar, deletedBooking].sort((a, b) =>
+                        new Date(a.startDate) - new Date(b.startDate)
+                    ),
+                });
+            }
+        }
     };
 
     const formatDate = (dateString) => {
@@ -2591,9 +2713,19 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
                 };
 
                 if (useBackend) {
-                    await updateData(async () => {
-                        await propertyAPI.addDocument(doc);
-                    });
+                    try {
+                        const addedDoc = await propertyAPI.addDocument(doc);
+                        // Optimistic update - add to UI immediately
+                        setData({
+                            ...data,
+                            documents: [...data.documents, addedDoc],
+                        });
+                    } catch (uploadError) {
+                        console.error('Error uploading to backend:', uploadError);
+                        showToast(`Failed to upload ${file.name} to server`, 'error');
+                        errorCount++;
+                        continue;
+                    }
                 } else {
                     doc.id = generateId();
                     const newData = {
@@ -2644,20 +2776,31 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const deleteDocument = async (id) => {
-        if (useBackend) {
-            await updateData(async () => {
-                await propertyAPI.deleteDocument(id);
-            });
-        } else {
-            setData({
-                ...data,
-                documents: data.documents.filter(d => d.id !== id),
-            });
-        }
+        const deletedDoc = data.documents.find(d => d.id === id);
+        
+        // Optimistic update - remove from UI immediately
+        setData({
+            ...data,
+            documents: data.documents.filter(d => d.id !== id),
+        });
         
         setViewingDoc(null);
         setConfirmDelete(null);
         showToast('Document deleted');
+        
+        if (useBackend) {
+            try {
+                await propertyAPI.deleteDocument(id);
+            } catch (error) {
+                console.error('Error deleting document:', error);
+                showToast('Failed to delete document', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    documents: [...data.documents, deletedDoc],
+                });
+            }
+        }
     };
 
     const downloadDocument = (doc) => {
@@ -2708,17 +2851,30 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const updateDocCategory = async (id, newCategory) => {
+        const oldCategory = data.documents.find(d => d.id === id)?.category;
+        
+        // Optimistic update - update UI immediately
+        setData({
+            ...data,
+            documents: data.documents.map(d =>
+                d.id === id ? { ...d, category: newCategory } : d
+            ),
+        });
+        
         if (useBackend) {
-            await updateData(async () => {
+            try {
                 await propertyAPI.updateDocument(id, { category: newCategory });
-            });
-        } else {
-            setData({
-                ...data,
-                documents: data.documents.map(d =>
-                    d.id === id ? { ...d, category: newCategory } : d
-                ),
-            });
+            } catch (error) {
+                console.error('Error updating document category:', error);
+                showToast('Failed to update category', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    documents: data.documents.map(d =>
+                        d.id === id ? { ...d, category: oldCategory } : d
+                    ),
+                });
+            }
         }
     };
 
