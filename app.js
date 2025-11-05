@@ -2053,7 +2053,7 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddBooking, setShowAddBooking] = useState(false);
     const [editingBooking, setEditingBooking] = useState(null);
     const [showPastBookings, setShowPastBookings] = useState(false);
-    const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
+    const [viewMode, setViewMode] = useState('list'); // 'calendar' or 'list' - default to list for easy access
     const [calendarStartMonth, setCalendarStartMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
     const [newBooking, setNewBooking] = useState({
@@ -2197,12 +2197,6 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                                 <Icons.Edit />
                             </button>
                         )}
-                        <button
-                            onClick={() => setConfirmDelete(booking.id)}
-                            className="text-red-500 p-1"
-                        >
-                            <Icons.Trash />
-                        </button>
                     </div>
                 </div>
                 <div className="text-gray-600 text-sm space-y-1">
@@ -2238,12 +2232,6 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                 <h2 className="text-2xl font-bold text-gray-800">Occupancy Calendar</h2>
                 <div className="flex gap-2">
                     <button
-                        onClick={() => setViewMode(viewMode === 'calendar' ? 'list' : 'calendar')}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                    >
-                        {viewMode === 'calendar' ? 'List View' : 'Calendar View'}
-                    </button>
-                    <button
                         onClick={() => setShowAddBooking(!showAddBooking)}
                         className={`p-2 rounded-full ${
                             showAddBooking ? 'bg-red-500' : 'bg-emerald-500'
@@ -2252,6 +2240,47 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                         {showAddBooking ? <Icons.X /> : <Icons.Plus />}
                     </button>
                 </div>
+            </div>
+
+            {/* View Mode Toggle - Prominent Tabs */}
+            <div className="flex gap-2 mb-4 border-b border-gray-200">
+                <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+                        viewMode === 'list'
+                            ? 'border-emerald-500 text-emerald-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Icons.List />
+                        <span className="hidden sm:inline">Bookings List</span>
+                        <span className="sm:hidden">List</span>
+                        {upcomingBookings.length > 0 && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                viewMode === 'list' 
+                                    ? 'bg-emerald-100 text-emerald-700' 
+                                    : 'bg-gray-200 text-gray-600'
+                            }`}>
+                                {upcomingBookings.length}
+                            </span>
+                        )}
+                    </div>
+                </button>
+                <button
+                    onClick={() => setViewMode('calendar')}
+                    className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+                        viewMode === 'calendar'
+                            ? 'border-emerald-500 text-emerald-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Icons.Calendar />
+                        <span className="hidden sm:inline">Calendar View</span>
+                        <span className="sm:hidden">Calendar</span>
+                    </div>
+                </button>
             </div>
 
             {showAddBooking && (
@@ -2347,6 +2376,16 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                                 Cancel
                             </button>
                         </div>
+                        <button
+                            onClick={() => {
+                                setConfirmDelete(editingBooking.id);
+                                setEditingBooking(null);
+                            }}
+                            className="w-full mt-4 bg-red-500 text-white py-2 rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Icons.Trash />
+                            Delete Booking
+                        </button>
                     </div>
                 </div>
             )}
