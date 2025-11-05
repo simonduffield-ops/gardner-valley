@@ -989,6 +989,18 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
                                 <div key={contact.id} className="p-4">
                                     {editingId === contact.id ? (
                                         <div className="space-y-2">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="font-semibold text-gray-800">Edit Contact</h4>
+                                                <button
+                                                    onClick={() => {
+                                                        setConfirmDelete(contact.id);
+                                                        setEditingId(null);
+                                                    }}
+                                                    className="text-red-500 p-2 hover:bg-red-50 rounded"
+                                                >
+                                                    <Icons.Trash />
+                                                </button>
+                                            </div>
                                             <input
                                                 type="text"
                                                 value={contact.name}
@@ -1003,7 +1015,7 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
                                             />
                                             <button
                                                 onClick={() => setEditingId(null)}
-                                                className="text-emerald-500 font-semibold"
+                                                className="w-full bg-emerald-500 text-white py-2 rounded font-semibold"
                                             >
                                                 Done
                                             </button>
@@ -1697,6 +1709,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
+    const [editingItem, setEditingItem] = useState(null);
     const draggedRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const saveOrderTimer = useRef(null);
@@ -1821,6 +1834,48 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                             deletedItem,
                             ...data.lists[activeList].slice(deletedIndex)
                         ],
+                    },
+                });
+            }
+        }
+    };
+
+    const updateItem = async () => {
+        if (!editingItem.text.trim()) return;
+        
+        const oldItem = data.lists[activeList].find(i => i.id === editingItem.id);
+        
+        // Optimistic update - update UI immediately
+        setData({
+            ...data,
+            lists: {
+                ...data.lists,
+                [activeList]: data.lists[activeList].map(i =>
+                    i.id === editingItem.id ? editingItem : i
+                ),
+            },
+        });
+        
+        setEditingItem(null);
+        showToast('Item updated');
+        
+        // Sync with backend in background
+        if (useBackend) {
+            try {
+                await propertyAPI.updateListItem(editingItem.id, {
+                    text: editingItem.text,
+                });
+            } catch (error) {
+                console.error('Error updating item:', error);
+                showToast('Failed to update item', 'error');
+                // Revert on error
+                setData({
+                    ...data,
+                    lists: {
+                        ...data.lists,
+                        [activeList]: data.lists[activeList].map(i =>
+                            i.id === editingItem.id ? oldItem : i
+                        ),
                     },
                 });
             }
@@ -2095,15 +2150,12 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                                 <Icons.Check />
                             )}
                         </button>
-                        <span className="flex-1 text-gray-800">
+                        <span
+                            onClick={() => setEditingItem({ ...item })}
+                            className="flex-1 text-gray-800 cursor-pointer"
+                        >
                             {item.text}
                         </span>
-                        <button
-                            onClick={() => setConfirmDelete(item.id)}
-                            className="text-red-500 p-1"
-                        >
-                            <Icons.Trash />
-                        </button>
                     </div>
                 ))}
                 {data.lists[activeList].length === 0 && (
@@ -2112,6 +2164,50 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     </div>
                 )}
             </div>
+
+            {/* Edit Item Dialog */}
+            {editingItem && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-xl">Edit Item</h3>
+                            <button
+                                onClick={() => {
+                                    setConfirmDelete(editingItem.id);
+                                    setEditingItem(null);
+                                }}
+                                className="text-red-500 p-2 hover:bg-red-50 rounded"
+                            >
+                                <Icons.Trash />
+                            </button>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Item text"
+                            value={editingItem.text}
+                            onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
+                            onKeyPress={(e) => e.key === 'Enter' && updateItem()}
+                            className="w-full p-2 border rounded mb-4"
+                            autoFocus
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={updateItem}
+                                disabled={!editingItem.text.trim()}
+                                className="flex-1 bg-emerald-500 text-white py-2 rounded disabled:bg-gray-300"
+                            >
+                                Save Changes
+                            </button>
+                            <button
+                                onClick={() => setEditingItem(null)}
+                                className="flex-1 bg-gray-300 text-gray-700 py-2 rounded"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Confirm Delete Dialog */}
             {confirmDelete && (
