@@ -1972,16 +1972,16 @@ function CalendarGrid({ bookings, startMonth, onDateClick }) {
 
     const getDayClass = (date) => {
         const bookingsOnDate = getBookingsForDate(date);
-        if (bookingsOnDate.length === 0) return 'bg-white hover:bg-gray-50';
+        if (bookingsOnDate.length === 0) return 'bg-green-100 hover:bg-green-50'; // Green for available
         
         // Check if all bookings are tentative or if there's at least one confirmed
         const hasBooked = bookingsOnDate.some(b => b.status === 'Booked');
         const hasTentative = bookingsOnDate.some(b => b.status === 'Tentative');
         
-        if (hasBooked && hasTentative) return 'bg-gradient-to-br from-blue-200 to-orange-200';
-        if (hasBooked) return 'bg-blue-200';
-        if (hasTentative) return 'bg-orange-200';
-        return 'bg-white hover:bg-gray-50';
+        if (hasBooked && hasTentative) return 'bg-gradient-to-br from-red-300 to-yellow-300'; // Mix of both
+        if (hasBooked) return 'bg-red-300'; // Red for booked
+        if (hasTentative) return 'bg-yellow-300'; // Yellow for tentative
+        return 'bg-green-100 hover:bg-green-50'; // Green for available
     };
 
     const renderMonth = (monthOffset) => {
@@ -2256,15 +2256,6 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                         <Icons.List />
                         <span className="hidden sm:inline">Bookings List</span>
                         <span className="sm:hidden">List</span>
-                        {upcomingBookings.length > 0 && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                viewMode === 'list' 
-                                    ? 'bg-emerald-100 text-emerald-700' 
-                                    : 'bg-gray-200 text-gray-600'
-                            }`}>
-                                {upcomingBookings.length}
-                            </span>
-                        )}
                     </div>
                 </button>
                 <button
@@ -2393,26 +2384,6 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
             {/* Calendar View Mode */}
             {viewMode === 'calendar' && (
                 <div>
-                    {/* Legend */}
-                    <div className="bg-white p-3 rounded-lg shadow mb-4 flex flex-wrap gap-4 justify-center text-sm">
-                        <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-white border border-gray-300 rounded"></div>
-                            <span>Free</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-blue-200 border border-gray-300 rounded"></div>
-                            <span>Booked</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-orange-200 border border-gray-300 rounded"></div>
-                            <span>Tentative</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-gradient-to-br from-blue-200 to-orange-200 border border-gray-300 rounded"></div>
-                            <span>Both</span>
-                        </div>
-                    </div>
-
                     {/* Calendar Navigation */}
                     <div className="flex justify-between items-center mb-4">
                         <button
