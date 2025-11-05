@@ -2043,8 +2043,8 @@ function CalendarGrid({ bookings, startMonth, onDateClick }) {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[0, 1, 2, 3, 4, 5].map(offset => renderMonth(offset))}
+        <div>
+            {renderMonth(0)}
         </div>
     );
 }
@@ -2222,7 +2222,7 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
 
     const navigateCalendar = (direction) => {
         const newDate = new Date(calendarStartMonth);
-        newDate.setMonth(newDate.getMonth() + (direction === 'forward' ? 6 : -6));
+        newDate.setMonth(newDate.getMonth() + (direction === 'forward' ? 1 : -1));
         setCalendarStartMonth(newDate);
     };
 
@@ -2388,9 +2388,12 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                     <div className="flex justify-between items-center mb-4">
                         <button
                             onClick={() => navigateCalendar('backward')}
-                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                            className="p-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                            aria-label="Previous month"
                         >
-                            ← Previous 6 Months
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
                         </button>
                         <button
                             onClick={() => setCalendarStartMonth(new Date())}
@@ -2400,9 +2403,12 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                         </button>
                         <button
                             onClick={() => navigateCalendar('forward')}
-                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                            className="p-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                            aria-label="Next month"
                         >
-                            Next 6 Months →
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
                         </button>
                     </div>
 
