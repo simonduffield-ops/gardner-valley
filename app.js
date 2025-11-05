@@ -1051,20 +1051,12 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => setEditingId(contact.id)}
-                                                        className="text-blue-500 p-1"
-                                                    >
-                                                        <Icons.Edit />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setConfirmDelete(contact.id)}
-                                                        className="text-red-500 p-1"
-                                                    >
-                                                        <Icons.Trash />
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    onClick={() => setEditingId(contact.id)}
+                                                    className="text-blue-500 p-1"
+                                                >
+                                                    <Icons.Edit />
+                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -2827,6 +2819,7 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
     const [showUpload, setShowUpload] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [viewingDoc, setViewingDoc] = useState(null);
+    const [editingDoc, setEditingDoc] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(null);
     const fileInputRef = useRef(null);
 
@@ -3171,14 +3164,38 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
+                                {editingDoc ? (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setConfirmDelete(viewingDoc.id);
+                                                setEditingDoc(false);
+                                                setViewingDoc(null);
+                                            }}
+                                            className="text-red-500 p-2 hover:bg-red-50 rounded"
+                                        >
+                                            <Icons.Trash />
+                                        </button>
+                                        <button
+                                            onClick={() => setEditingDoc(false)}
+                                            className="text-emerald-500 p-2 hover:bg-emerald-50 rounded font-semibold"
+                                        >
+                                            Done
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={() => setEditingDoc(true)}
+                                        className="text-blue-500 p-2 hover:bg-blue-50 rounded"
+                                    >
+                                        <Icons.Edit />
+                                    </button>
+                                )}
                                 <button
-                                    onClick={() => setConfirmDelete(viewingDoc.id)}
-                                    className="text-red-500 p-2 hover:bg-red-50 rounded"
-                                >
-                                    <Icons.Trash />
-                                </button>
-                                <button
-                                    onClick={() => setViewingDoc(null)}
+                                    onClick={() => {
+                                        setViewingDoc(null);
+                                        setEditingDoc(false);
+                                    }}
                                     className="text-gray-500 p-1"
                                 >
                                     <Icons.X />
@@ -3215,19 +3232,21 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
                                 )}
                             </div>
 
-                            {/* Category Selector */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-semibold mb-2">Category</label>
-                                <select
-                                    value={viewingDoc.category}
-                                    onChange={(e) => updateDocCategory(viewingDoc.id, e.target.value)}
-                                    className="w-full p-2 border rounded"
-                                >
-                                    {categories.filter(c => c !== 'All').map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            {/* Category Selector - Only in edit mode */}
+                            {editingDoc && (
+                                <div className="mb-4">
+                                    <label className="block text-sm font-semibold mb-2">Category</label>
+                                    <select
+                                        value={viewingDoc.category}
+                                        onChange={(e) => updateDocCategory(viewingDoc.id, e.target.value)}
+                                        className="w-full p-2 border rounded"
+                                    >
+                                        {categories.filter(c => c !== 'All').map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Actions */}
                             <button
