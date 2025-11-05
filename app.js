@@ -2396,6 +2396,45 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
             {/* Calendar View Mode */}
             {viewMode === 'calendar' && (
                 <div>
+                    {/* Month/Year Picker */}
+                    <div className="mb-4 flex gap-2">
+                        <select
+                            value={calendarStartMonth.getMonth()}
+                            onChange={(e) => {
+                                const newDate = new Date(calendarStartMonth);
+                                newDate.setMonth(parseInt(e.target.value));
+                                setCalendarStartMonth(newDate);
+                            }}
+                            className="flex-1 p-2 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium"
+                        >
+                            <option value="0">January</option>
+                            <option value="1">February</option>
+                            <option value="2">March</option>
+                            <option value="3">April</option>
+                            <option value="4">May</option>
+                            <option value="5">June</option>
+                            <option value="6">July</option>
+                            <option value="7">August</option>
+                            <option value="8">September</option>
+                            <option value="9">October</option>
+                            <option value="10">November</option>
+                            <option value="11">December</option>
+                        </select>
+                        <select
+                            value={calendarStartMonth.getFullYear()}
+                            onChange={(e) => {
+                                const newDate = new Date(calendarStartMonth);
+                                newDate.setFullYear(parseInt(e.target.value));
+                                setCalendarStartMonth(newDate);
+                            }}
+                            className="w-24 p-2 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium"
+                        >
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Calendar Navigation */}
                     <div className="flex justify-between items-center mb-4">
                         <button
