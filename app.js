@@ -1959,10 +1959,103 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     );
 }
 
+// Calendar Grid Component for visual month view
+function CalendarGrid({ bookings, startMonth, onDateClick }) {
+    const getBookingsForDate = (date) => {
+        const dateStr = date.toISOString().split('T')[0];
+        return bookings.filter(booking => {
+            const start = new Date(booking.startDate);
+            const end = new Date(booking.endDate);
+            return date >= start && date <= end;
+        });
+    };
+
+    const getDayClass = (date) => {
+        const bookingsOnDate = getBookingsForDate(date);
+        if (bookingsOnDate.length === 0) return 'bg-white hover:bg-gray-50';
+        
+        // Check if all bookings are tentative or if there's at least one confirmed
+        const hasBooked = bookingsOnDate.some(b => b.status === 'Booked');
+        const hasTentative = bookingsOnDate.some(b => b.status === 'Tentative');
+        
+        if (hasBooked && hasTentative) return 'bg-gradient-to-br from-blue-200 to-orange-200';
+        if (hasBooked) return 'bg-blue-200';
+        if (hasTentative) return 'bg-orange-200';
+        return 'bg-white hover:bg-gray-50';
+    };
+
+    const renderMonth = (monthOffset) => {
+        const date = new Date(startMonth);
+        date.setMonth(date.getMonth() + monthOffset);
+        
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        
+        // Get first day of month and number of days
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday
+        
+        const days = [];
+        
+        // Add empty cells for days before month starts
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            days.push(<div key={`empty-${i}`} className="h-10 md:h-12"></div>);
+        }
+        
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const currentDate = new Date(year, month, day);
+            const bookingsOnDate = getBookingsForDate(currentDate);
+            const isToday = new Date().toDateString() === currentDate.toDateString();
+            
+            days.push(
+                <div
+                    key={day}
+                    onClick={() => onDateClick && onDateClick(currentDate, bookingsOnDate)}
+                    className={`h-10 md:h-12 flex flex-col items-center justify-center text-sm cursor-pointer border border-gray-200 ${getDayClass(currentDate)} ${isToday ? 'ring-2 ring-emerald-500' : ''}`}
+                >
+                    <span className={`${isToday ? 'font-bold' : ''}`}>{day}</span>
+                    {bookingsOnDate.length > 0 && (
+                        <span className="text-xs text-gray-700">•</span>
+                    )}
+                </div>
+            );
+        }
+        
+        return (
+            <div key={monthOffset} className="bg-white rounded-lg shadow-sm p-3 md:p-4">
+                <h3 className="font-semibold text-gray-800 mb-2 text-center">{monthName}</h3>
+                <div className="grid grid-cols-7 gap-0.5 md:gap-1 mb-1">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="text-xs font-semibold text-gray-600 text-center py-1">
+                            {day}
+                        </div>
+                    ))}
+                </div>
+                <div className="grid grid-cols-7 gap-0.5 md:gap-1">
+                    {days}
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[0, 1, 2, 3, 4, 5].map(offset => renderMonth(offset))}
+        </div>
+    );
+}
+
 function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddBooking, setShowAddBooking] = useState(false);
     const [editingBooking, setEditingBooking] = useState(null);
     const [showPastBookings, setShowPastBookings] = useState(false);
+    const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
+    const [calendarStartMonth, setCalendarStartMonth] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(null);
     const [newBooking, setNewBooking] = useState({
         startDate: '',
         endDate: '',
@@ -2129,18 +2222,36 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
         );
     };
 
+    const handleDateClick = (date, bookingsOnDate) => {
+        setSelectedDate({ date, bookings: bookingsOnDate });
+    };
+
+    const navigateCalendar = (direction) => {
+        const newDate = new Date(calendarStartMonth);
+        newDate.setMonth(newDate.getMonth() + (direction === 'forward' ? 6 : -6));
+        setCalendarStartMonth(newDate);
+    };
+
     return (
         <div className="p-4">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">Occupancy Calendar</h2>
-                <button
-                    onClick={() => setShowAddBooking(!showAddBooking)}
-                    className={`p-2 rounded-full ${
-                        showAddBooking ? 'bg-red-500' : 'bg-emerald-500'
-                    } text-white shadow-lg`}
-                >
-                    {showAddBooking ? <Icons.X /> : <Icons.Plus />}
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setViewMode(viewMode === 'calendar' ? 'list' : 'calendar')}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                    >
+                        {viewMode === 'calendar' ? 'List View' : 'Calendar View'}
+                    </button>
+                    <button
+                        onClick={() => setShowAddBooking(!showAddBooking)}
+                        className={`p-2 rounded-full ${
+                            showAddBooking ? 'bg-red-500' : 'bg-emerald-500'
+                        } text-white shadow-lg`}
+                    >
+                        {showAddBooking ? <Icons.X /> : <Icons.Plus />}
+                    </button>
+                </div>
             </div>
 
             {showAddBooking && (
@@ -2240,38 +2351,143 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                 </div>
             )}
 
-            {/* Upcoming Bookings */}
-            <div className="space-y-3 mb-4">
-                {upcomingBookings.map(booking => renderBookingCard(booking))}
-                {upcomingBookings.length === 0 && (
-                    <div className="text-center text-gray-400 py-8">
-                        No upcoming bookings. Add your first booking above!
+            {/* Calendar View Mode */}
+            {viewMode === 'calendar' && (
+                <div>
+                    {/* Legend */}
+                    <div className="bg-white p-3 rounded-lg shadow mb-4 flex flex-wrap gap-4 justify-center text-sm">
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-white border border-gray-300 rounded"></div>
+                            <span>Free</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-blue-200 border border-gray-300 rounded"></div>
+                            <span>Booked</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-orange-200 border border-gray-300 rounded"></div>
+                            <span>Tentative</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-gradient-to-br from-blue-200 to-orange-200 border border-gray-300 rounded"></div>
+                            <span>Both</span>
+                        </div>
                     </div>
-                )}
-            </div>
 
-            {/* Past Bookings Section */}
-            {pastBookings.length > 0 && (
-                <div className="mt-6 border-t pt-4">
-                    <button
-                        onClick={() => setShowPastBookings(!showPastBookings)}
-                        className="w-full flex justify-between items-center p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                        <span className="font-semibold text-gray-700">
-                            Previous Bookings ({pastBookings.length})
-                        </span>
-                        <span className="transform transition-transform" style={{
-                            transform: showPastBookings ? 'rotate(180deg)' : 'rotate(0deg)'
-                        }}>
-                            ▼
-                        </span>
-                    </button>
-                    {showPastBookings && (
-                        <div className="mt-3 space-y-3">
-                            {pastBookings.map(booking => renderBookingCard(booking, true))}
+                    {/* Calendar Navigation */}
+                    <div className="flex justify-between items-center mb-4">
+                        <button
+                            onClick={() => navigateCalendar('backward')}
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                        >
+                            ← Previous 6 Months
+                        </button>
+                        <button
+                            onClick={() => setCalendarStartMonth(new Date())}
+                            className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors"
+                        >
+                            Today
+                        </button>
+                        <button
+                            onClick={() => navigateCalendar('forward')}
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                        >
+                            Next 6 Months →
+                        </button>
+                    </div>
+
+                    {/* Calendar Grid */}
+                    <CalendarGrid 
+                        bookings={data.calendar} 
+                        startMonth={calendarStartMonth}
+                        onDateClick={handleDateClick}
+                    />
+
+                    {/* Date Details Modal */}
+                    {selectedDate && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                                <h3 className="font-semibold mb-4 text-xl">
+                                    {selectedDate.date.toLocaleDateString('en-US', { 
+                                        weekday: 'long', 
+                                        month: 'long', 
+                                        day: 'numeric', 
+                                        year: 'numeric' 
+                                    })}
+                                </h3>
+                                {selectedDate.bookings.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {selectedDate.bookings.map(booking => (
+                                            <div key={booking.id} className="border-l-4 border-blue-500 pl-3 py-2">
+                                                <div className="font-semibold text-gray-800">{booking.guest}</div>
+                                                <div className="text-sm text-gray-600">
+                                                    Check-in: {formatDate(booking.startDate)}
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    Check-out: {formatDate(booking.endDate)}
+                                                </div>
+                                                <span className={`inline-block text-xs px-2 py-1 rounded-full mt-1 ${
+                                                    booking.status === 'Tentative' 
+                                                        ? 'bg-orange-100 text-orange-700' 
+                                                        : 'bg-blue-100 text-blue-700'
+                                                }`}>
+                                                    {booking.status || 'Booked'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500">No bookings on this date</p>
+                                )}
+                                <button
+                                    onClick={() => setSelectedDate(null)}
+                                    className="mt-4 w-full bg-gray-300 text-gray-700 py-2 rounded"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* List View Mode */}
+            {viewMode === 'list' && (
+                <>
+                    {/* Upcoming Bookings */}
+                    <div className="space-y-3 mb-4">
+                        {upcomingBookings.map(booking => renderBookingCard(booking))}
+                        {upcomingBookings.length === 0 && (
+                            <div className="text-center text-gray-400 py-8">
+                                No upcoming bookings. Add your first booking above!
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Past Bookings Section */}
+                    {pastBookings.length > 0 && (
+                        <div className="mt-6 border-t pt-4">
+                            <button
+                                onClick={() => setShowPastBookings(!showPastBookings)}
+                                className="w-full flex justify-between items-center p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                                <span className="font-semibold text-gray-700">
+                                    Previous Bookings ({pastBookings.length})
+                                </span>
+                                <span className="transform transition-transform" style={{
+                                    transform: showPastBookings ? 'rotate(180deg)' : 'rotate(0deg)'
+                                }}>
+                                    ▼
+                                </span>
+                            </button>
+                            {showPastBookings && (
+                                <div className="mt-3 space-y-3">
+                                    {pastBookings.map(booking => renderBookingCard(booking, true))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </>
             )}
 
             {/* Confirm Delete Dialog */}
