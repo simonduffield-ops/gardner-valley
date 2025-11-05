@@ -334,7 +334,8 @@ class PropertyAPI {
             return (data || []).map(booking => ({
                 ...booking,
                 startDate: booking.start_date,
-                endDate: booking.end_date
+                endDate: booking.end_date,
+                status: booking.status || 'Booked'
             }));
         } catch (error) {
             this.handleError(error, 'getCalendarBookings');
@@ -348,7 +349,8 @@ class PropertyAPI {
                 .insert({
                     start_date: booking.startDate,
                     end_date: booking.endDate,
-                    guest: booking.guest
+                    guest: booking.guest,
+                    status: booking.status || 'Booked'
                 })
                 .select()
                 .single();
@@ -358,7 +360,8 @@ class PropertyAPI {
             return {
                 ...data,
                 startDate: data.start_date,
-                endDate: data.end_date
+                endDate: data.end_date,
+                status: data.status
             };
         } catch (error) {
             this.handleError(error, 'addCalendarBooking');
@@ -371,6 +374,7 @@ class PropertyAPI {
             if (updates.startDate) dbUpdates.start_date = updates.startDate;
             if (updates.endDate) dbUpdates.end_date = updates.endDate;
             if (updates.guest) dbUpdates.guest = updates.guest;
+            if (updates.status) dbUpdates.status = updates.status;
 
             const { data, error } = await supabase
                 .from('calendar_bookings')
@@ -384,7 +388,8 @@ class PropertyAPI {
             return {
                 ...data,
                 startDate: data.start_date,
-                endDate: data.end_date
+                endDate: data.end_date,
+                status: data.status
             };
         } catch (error) {
             this.handleError(error, 'updateCalendarBooking');

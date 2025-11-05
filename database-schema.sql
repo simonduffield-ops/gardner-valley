@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS calendar_bookings (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     guest TEXT NOT NULL,
+    status TEXT DEFAULT 'Booked' CHECK (status IN ('Tentative', 'Booked')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

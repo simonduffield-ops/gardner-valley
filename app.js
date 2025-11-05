@@ -1961,10 +1961,13 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
 function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddBooking, setShowAddBooking] = useState(false);
+    const [editingBooking, setEditingBooking] = useState(null);
+    const [showPastBookings, setShowPastBookings] = useState(false);
     const [newBooking, setNewBooking] = useState({
         startDate: '',
         endDate: '',
         guest: '',
+        status: 'Booked',
     });
     const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -1989,9 +1992,34 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
             });
         }
         
-        setNewBooking({ startDate: '', endDate: '', guest: '' });
+        setNewBooking({ startDate: '', endDate: '', guest: '', status: 'Booked' });
         setShowAddBooking(false);
         showToast('Booking added successfully!');
+    };
+
+    const updateBooking = async () => {
+        if (!editingBooking.startDate || !editingBooking.endDate || !editingBooking.guest) return;
+        
+        if (useBackend) {
+            await updateData(async () => {
+                await propertyAPI.updateCalendarBooking(editingBooking.id, {
+                    startDate: editingBooking.startDate,
+                    endDate: editingBooking.endDate,
+                    guest: editingBooking.guest,
+                    status: editingBooking.status,
+                });
+            });
+        } else {
+            setData({
+                ...data,
+                calendar: data.calendar.map(b => 
+                    b.id === editingBooking.id ? editingBooking : b
+                ).sort((a, b) => new Date(a.startDate) - new Date(b.startDate)),
+            });
+        }
+        
+        setEditingBooking(null);
+        showToast('Booking updated successfully!');
     };
 
     const deleteBooking = async (id) => {
@@ -2020,6 +2048,85 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
         const endDate = new Date(end);
         const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
         return `${days} night${days !== 1 ? 's' : ''}`;
+    };
+
+    const isPast = (endDate) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return new Date(endDate) < today;
+    };
+
+    // Separate past and upcoming bookings
+    const upcomingBookings = data.calendar.filter(b => !isPast(b.endDate));
+    const pastBookings = data.calendar.filter(b => isPast(b.endDate)).sort((a, b) => 
+        new Date(b.endDate) - new Date(a.endDate) // Most recent first
+    );
+
+    const renderBookingCard = (booking, isPastBooking = false) => {
+        const isActive = new Date() >= new Date(booking.startDate) &&
+                        new Date() <= new Date(booking.endDate);
+        const status = booking.status || 'Booked';
+        
+        return (
+            <div
+                key={booking.id}
+                className={`bg-white rounded-lg shadow p-4 border-l-4 ${
+                    isActive ? 'border-emerald-500' : 
+                    status === 'Tentative' ? 'border-orange-500' : 'border-blue-500'
+                } ${isPastBooking ? 'opacity-75' : ''}`}
+            >
+                <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                        <div className="font-bold text-lg text-gray-800">
+                            {booking.guest}
+                        </div>
+                        <div className="flex gap-2 mt-1 flex-wrap">
+                            {isActive && (
+                                <span className="inline-block bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-full">
+                                    Currently Occupied
+                                </span>
+                            )}
+                            <span className={`inline-block text-xs px-2 py-1 rounded-full ${
+                                status === 'Tentative' 
+                                    ? 'bg-orange-100 text-orange-700' 
+                                    : 'bg-blue-100 text-blue-700'
+                            }`}>
+                                {status}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        {!isPastBooking && (
+                            <button
+                                onClick={() => setEditingBooking(booking)}
+                                className="text-blue-500 p-1"
+                            >
+                                <Icons.Edit />
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setConfirmDelete(booking.id)}
+                            className="text-red-500 p-1"
+                        >
+                            <Icons.Trash />
+                        </button>
+                    </div>
+                </div>
+                <div className="text-gray-600 text-sm space-y-1">
+                    <div>
+                        <span className="font-semibold">Check-in:</span>{' '}
+                        {formatDate(booking.startDate)}
+                    </div>
+                    <div>
+                        <span className="font-semibold">Check-out:</span>{' '}
+                        {formatDate(booking.endDate)}
+                    </div>
+                    <div className="text-gray-500">
+                        {getDuration(booking.startDate, booking.endDate)}
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -2060,6 +2167,15 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                         onChange={(e) => setNewBooking({ ...newBooking, endDate: e.target.value })}
                         className="w-full p-2 border rounded mb-2"
                     />
+                    <label className="block text-sm text-gray-600 mb-1">Status</label>
+                    <select
+                        value={newBooking.status}
+                        onChange={(e) => setNewBooking({ ...newBooking, status: e.target.value })}
+                        className="w-full p-2 border rounded mb-2"
+                    >
+                        <option value="Booked">Booked</option>
+                        <option value="Tentative">Tentative</option>
+                    </select>
                     <button
                         onClick={addBooking}
                         disabled={!newBooking.guest || !newBooking.startDate || !newBooking.endDate}
@@ -2070,58 +2186,93 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                 </div>
             )}
 
-            <div className="space-y-3">
-                {data.calendar.map(booking => {
-                    const isActive = new Date() >= new Date(booking.startDate) &&
-                                    new Date() <= new Date(booking.endDate);
-                    
-                    return (
-                        <div
-                            key={booking.id}
-                            className={`bg-white rounded-lg shadow p-4 border-l-4 ${
-                                isActive ? 'border-emerald-500' : 'border-blue-500'
-                            }`}
+            {/* Edit Booking Modal */}
+            {editingBooking && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                        <h3 className="font-semibold mb-4 text-xl">Edit Booking</h3>
+                        <input
+                            type="text"
+                            placeholder="Guest Name"
+                            value={editingBooking.guest}
+                            onChange={(e) => setEditingBooking({ ...editingBooking, guest: e.target.value })}
+                            className="w-full p-2 border rounded mb-2"
+                        />
+                        <label className="block text-sm text-gray-600 mb-1">Check-in</label>
+                        <input
+                            type="date"
+                            value={editingBooking.startDate}
+                            onChange={(e) => setEditingBooking({ ...editingBooking, startDate: e.target.value })}
+                            className="w-full p-2 border rounded mb-2"
+                        />
+                        <label className="block text-sm text-gray-600 mb-1">Check-out</label>
+                        <input
+                            type="date"
+                            value={editingBooking.endDate}
+                            onChange={(e) => setEditingBooking({ ...editingBooking, endDate: e.target.value })}
+                            className="w-full p-2 border rounded mb-2"
+                        />
+                        <label className="block text-sm text-gray-600 mb-1">Status</label>
+                        <select
+                            value={editingBooking.status || 'Booked'}
+                            onChange={(e) => setEditingBooking({ ...editingBooking, status: e.target.value })}
+                            className="w-full p-2 border rounded mb-4"
                         >
-                            <div className="flex justify-between items-start mb-2">
-                                <div>
-                                    <div className="font-bold text-lg text-gray-800">
-                                        {booking.guest}
-                                    </div>
-                                    {isActive && (
-                                        <span className="inline-block bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-full">
-                                            Currently Occupied
-                                        </span>
-                                    )}
-                                </div>
-                                <button
-                                    onClick={() => setConfirmDelete(booking.id)}
-                                    className="text-red-500 p-1"
-                                >
-                                    <Icons.Trash />
-                                </button>
-                            </div>
-                            <div className="text-gray-600 text-sm space-y-1">
-                                <div>
-                                    <span className="font-semibold">Check-in:</span>{' '}
-                                    {formatDate(booking.startDate)}
-                                </div>
-                                <div>
-                                    <span className="font-semibold">Check-out:</span>{' '}
-                                    {formatDate(booking.endDate)}
-                                </div>
-                                <div className="text-gray-500">
-                                    {getDuration(booking.startDate, booking.endDate)}
-                                </div>
-                            </div>
+                            <option value="Booked">Booked</option>
+                            <option value="Tentative">Tentative</option>
+                        </select>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={updateBooking}
+                                disabled={!editingBooking.guest || !editingBooking.startDate || !editingBooking.endDate}
+                                className="flex-1 bg-emerald-500 text-white py-2 rounded disabled:bg-gray-300"
+                            >
+                                Save Changes
+                            </button>
+                            <button
+                                onClick={() => setEditingBooking(null)}
+                                className="flex-1 bg-gray-300 text-gray-700 py-2 rounded"
+                            >
+                                Cancel
+                            </button>
                         </div>
-                    );
-                })}
-                {data.calendar.length === 0 && (
+                    </div>
+                </div>
+            )}
+
+            {/* Upcoming Bookings */}
+            <div className="space-y-3 mb-4">
+                {upcomingBookings.map(booking => renderBookingCard(booking))}
+                {upcomingBookings.length === 0 && (
                     <div className="text-center text-gray-400 py-8">
-                        No bookings scheduled. Add your first booking above!
+                        No upcoming bookings. Add your first booking above!
                     </div>
                 )}
             </div>
+
+            {/* Past Bookings Section */}
+            {pastBookings.length > 0 && (
+                <div className="mt-6 border-t pt-4">
+                    <button
+                        onClick={() => setShowPastBookings(!showPastBookings)}
+                        className="w-full flex justify-between items-center p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                        <span className="font-semibold text-gray-700">
+                            Previous Bookings ({pastBookings.length})
+                        </span>
+                        <span className="transform transition-transform" style={{
+                            transform: showPastBookings ? 'rotate(180deg)' : 'rotate(0deg)'
+                        }}>
+                            ▼
+                        </span>
+                    </button>
+                    {showPastBookings && (
+                        <div className="mt-3 space-y-3">
+                            {pastBookings.map(booking => renderBookingCard(booking, true))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Confirm Delete Dialog */}
             {confirmDelete && (
