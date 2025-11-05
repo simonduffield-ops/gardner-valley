@@ -2055,7 +2055,6 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     const [showPastBookings, setShowPastBookings] = useState(false);
     const [viewMode, setViewMode] = useState('list'); // 'calendar' or 'list' - default to list for easy access
     const [calendarStartMonth, setCalendarStartMonth] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState(null);
     const [newBooking, setNewBooking] = useState({
         startDate: '',
         endDate: '',
@@ -2217,7 +2216,20 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const handleDateClick = (date, bookingsOnDate) => {
-        setSelectedDate({ date, bookings: bookingsOnDate });
+        if (bookingsOnDate.length > 0) {
+            // If there's a booking, open edit modal with the first booking
+            setEditingBooking(bookingsOnDate[0]);
+        } else {
+            // If date is free, open new booking modal with date pre-filled
+            const dateStr = date.toISOString().split('T')[0];
+            setNewBooking({
+                startDate: dateStr,
+                endDate: dateStr,
+                guest: '',
+                status: 'Booked',
+            });
+            setShowAddBooking(true);
+        }
     };
 
     const navigateCalendar = (direction) => {
@@ -2418,52 +2430,6 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                         startMonth={calendarStartMonth}
                         onDateClick={handleDateClick}
                     />
-
-                    {/* Date Details Modal */}
-                    {selectedDate && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                                <h3 className="font-semibold mb-4 text-xl">
-                                    {selectedDate.date.toLocaleDateString('en-US', { 
-                                        weekday: 'long', 
-                                        month: 'long', 
-                                        day: 'numeric', 
-                                        year: 'numeric' 
-                                    })}
-                                </h3>
-                                {selectedDate.bookings.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {selectedDate.bookings.map(booking => (
-                                            <div key={booking.id} className="border-l-4 border-blue-500 pl-3 py-2">
-                                                <div className="font-semibold text-gray-800">{booking.guest}</div>
-                                                <div className="text-sm text-gray-600">
-                                                    Check-in: {formatDate(booking.startDate)}
-                                                </div>
-                                                <div className="text-sm text-gray-600">
-                                                    Check-out: {formatDate(booking.endDate)}
-                                                </div>
-                                                <span className={`inline-block text-xs px-2 py-1 rounded-full mt-1 ${
-                                                    booking.status === 'Tentative' 
-                                                        ? 'bg-orange-100 text-orange-700' 
-                                                        : 'bg-blue-100 text-blue-700'
-                                                }`}>
-                                                    {booking.status || 'Booked'}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-500">No bookings on this date</p>
-                                )}
-                                <button
-                                    onClick={() => setSelectedDate(null)}
-                                    className="mt-4 w-full bg-gray-300 text-gray-700 py-2 rounded"
-                                >
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
