@@ -1638,9 +1638,20 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             {editingItem && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                        <h3 className="font-semibold mb-4 text-xl">
-                            {editingItem.is_section ? 'Edit Section' : 'Edit Item'}
-                        </h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-xl">
+                                {editingItem.is_section ? 'Edit Section' : 'Edit Item'}
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setConfirmDelete(editingItem.id);
+                                    setEditingItem(null);
+                                }}
+                                className="text-red-500 p-2 hover:bg-red-50 rounded"
+                            >
+                                <Icons.Trash />
+                            </button>
+                        </div>
                         <input
                             type="text"
                             placeholder={editingItem.is_section ? "Section name" : "Item text"}
@@ -1665,16 +1676,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 Cancel
                             </button>
                         </div>
-                        <button
-                            onClick={() => {
-                                setConfirmDelete(editingItem.id);
-                                setEditingItem(null);
-                            }}
-                            className="w-full mt-4 bg-red-500 text-white py-2 rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Icons.Trash />
-                            {editingItem.is_section ? 'Delete Section' : 'Delete Item'}
-                        </button>
                     </div>
                 </div>
             )}
@@ -2535,7 +2536,18 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
             {editingBooking && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                        <h3 className="font-semibold mb-4 text-xl">Edit Booking</h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-xl">Edit Booking</h3>
+                            <button
+                                onClick={() => {
+                                    setConfirmDelete(editingBooking.id);
+                                    setEditingBooking(null);
+                                }}
+                                className="text-red-500 p-2 hover:bg-red-50 rounded"
+                            >
+                                <Icons.Trash />
+                            </button>
+                        </div>
                         <input
                             type="text"
                             placeholder="Guest Name"
@@ -2581,16 +2593,6 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
                                 Cancel
                             </button>
                         </div>
-                        <button
-                            onClick={() => {
-                                setConfirmDelete(editingBooking.id);
-                                setEditingBooking(null);
-                            }}
-                            className="w-full mt-4 bg-red-500 text-white py-2 rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Icons.Trash />
-                            Delete Booking
-                        </button>
                     </div>
                 </div>
             )}
@@ -3072,12 +3074,20 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
                                     {viewingDoc.size} • {viewingDoc.uploadDate}
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setViewingDoc(null)}
-                                className="text-gray-500 p-1"
-                            >
-                                <Icons.X />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setConfirmDelete(viewingDoc.id)}
+                                    className="text-red-500 p-2 hover:bg-red-50 rounded"
+                                >
+                                    <Icons.Trash />
+                                </button>
+                                <button
+                                    onClick={() => setViewingDoc(null)}
+                                    className="text-gray-500 p-1"
+                                >
+                                    <Icons.X />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Content */}
@@ -3124,22 +3134,13 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => downloadDocument(viewingDoc)}
-                                    className="flex-1 bg-emerald-500 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
-                                >
-                                    <Icons.Download />
-                                    Download
-                                </button>
-                                <button
-                                    onClick={() => setConfirmDelete(viewingDoc.id)}
-                                    className="flex-1 bg-red-500 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
-                                >
-                                    <Icons.Trash />
-                                    Delete
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => downloadDocument(viewingDoc)}
+                                className="w-full bg-emerald-500 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
+                            >
+                                <Icons.Download />
+                                Download
+                            </button>
                         </div>
                     </div>
                 </div>
