@@ -1960,7 +1960,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 }
 
 // Calendar Grid Component for visual month view
-function CalendarGrid({ bookings, startMonth, onDateClick }) {
+const CalendarGrid = memo(({ bookings, startMonth, onDateClick }) => {
     const getBookingsForDate = (date) => {
         const dateStr = date.toISOString().split('T')[0];
         return bookings.filter(booking => {
@@ -2047,7 +2047,7 @@ function CalendarGrid({ bookings, startMonth, onDateClick }) {
             {renderMonth(0)}
         </div>
     );
-}
+});
 
 function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddBooking, setShowAddBooking] = useState(false);
