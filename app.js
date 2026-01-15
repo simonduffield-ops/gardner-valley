@@ -2292,9 +2292,16 @@ const CalendarGrid = memo(({ bookings, startMonth, onDateClick }) => {
     const getBookingsForDate = (date) => {
         const dateStr = date.toISOString().split('T')[0];
         return bookings.filter(booking => {
+            // Normalize all dates to midnight local time for accurate comparison
+            const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
             const start = new Date(booking.startDate);
+            const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
             const end = new Date(booking.endDate);
-            return date >= start && date <= end;
+            const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+            
+            // A booking occupies dates from startDate (inclusive) to endDate (exclusive)
+            // endDate is the checkout date, so it should be available
+            return checkDate >= startDay && checkDate < endDay;
         });
     };
 
@@ -2520,8 +2527,17 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
     );
 
     const renderBookingCard = (booking, isPastBooking = false) => {
-        const isActive = new Date() >= new Date(booking.startDate) &&
-                        new Date() <= new Date(booking.endDate);
+        // Normalize today's date to midnight for accurate comparison
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const start = new Date(booking.startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(booking.endDate);
+        end.setHours(0, 0, 0, 0);
+        
+        // A booking is active from startDate (inclusive) to endDate (exclusive)
+        // On checkout day (endDate), the property is no longer occupied
+        const isActive = today >= start && today < end;
         const status = booking.status || 'Booked';
         
         return (
