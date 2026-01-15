@@ -417,11 +417,41 @@ function PropertyManager() {
     // Show loading screen while initializing
     if (loading) {
         return (
-            <div className="h-screen flex items-center justify-center bg-gradient-to-br from-emerald-500 to-teal-500">
-                <div className="text-center text-white">
-                    <div className="text-6xl mb-4">🏡</div>
-                    <h2 className="text-2xl font-bold mb-2">Gardner Valley</h2>
-                    <p className="animate-pulse">Loading...</p>
+            <div className="h-screen flex items-center justify-center bg-gradient-to-br from-sky-400 via-emerald-400 to-teal-500 overflow-hidden relative">
+                {/* Sun */}
+                <div className="absolute top-20 sun-rise">
+                    <div className="text-8xl">☀️</div>
+                    <div className="absolute inset-0 sun-rays opacity-30">
+                        <div className="text-8xl">✨</div>
+                    </div>
+                </div>
+                
+                {/* Main content */}
+                <div className="text-center text-white relative z-10 -mt-8">
+                    {/* House with float animation */}
+                    <div className="text-7xl mb-6 float-anim">🏡</div>
+                    
+                    {/* Title */}
+                    <h2 className="text-3xl font-bold mb-6 drop-shadow-lg">Gardner Valley</h2>
+                    
+                    {/* Growing plants */}
+                    <div className="flex justify-center gap-4 text-5xl mb-4">
+                        <span className="plant-grow-1">🌱</span>
+                        <span className="plant-grow-2">🌿</span>
+                        <span className="plant-grow-3">🌾</span>
+                    </div>
+                    
+                    {/* Loading text */}
+                    <p className="text-lg shimmer">Preparing your property...</p>
+                </div>
+                
+                {/* Ground/grass at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-green-600 to-transparent flex items-end justify-center gap-3 text-4xl pb-4">
+                    <span className="plant-grow-1">🌻</span>
+                    <span className="plant-grow-2">🌷</span>
+                    <span className="plant-grow-3">🌸</span>
+                    <span className="plant-grow-1" style={{animationDelay: '0.9s'}}>🌺</span>
+                    <span className="plant-grow-2" style={{animationDelay: '1.2s'}}>🌼</span>
                 </div>
             </div>
         );

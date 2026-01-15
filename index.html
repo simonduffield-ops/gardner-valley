@@ -56,6 +56,57 @@
         .animate-slide-in {
             animation: slide-in 0.3s ease-out;
         }
+        
+        /* Loading Animation Styles */
+        @keyframes sun-rise {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-10px) scale(1.05); }
+        }
+        @keyframes sun-rays {
+            0%, 100% { transform: rotate(0deg) scale(1); opacity: 0.6; }
+            50% { transform: rotate(45deg) scale(1.1); opacity: 1; }
+        }
+        @keyframes plant-grow {
+            0% { transform: translateY(10px) scale(0.8); opacity: 0.5; }
+            50% { transform: translateY(-5px) scale(1.05); opacity: 1; }
+            100% { transform: translateY(0px) scale(1); opacity: 0.8; }
+        }
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        .sun-rise {
+            animation: sun-rise 3s ease-in-out infinite;
+        }
+        .sun-rays {
+            animation: sun-rays 4s ease-in-out infinite;
+        }
+        .plant-grow-1 {
+            animation: plant-grow 2s ease-in-out infinite, sway 3s ease-in-out infinite;
+            animation-delay: 0s;
+        }
+        .plant-grow-2 {
+            animation: plant-grow 2s ease-in-out infinite, sway 3s ease-in-out infinite;
+            animation-delay: 0.3s;
+        }
+        .plant-grow-3 {
+            animation: plant-grow 2s ease-in-out infinite, sway 3s ease-in-out infinite;
+            animation-delay: 0.6s;
+        }
+        .float-anim {
+            animation: float 3s ease-in-out infinite;
+        }
+        .shimmer {
+            animation: shimmer 2s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>
