@@ -444,15 +444,6 @@ function PropertyManager() {
                     {/* Loading text */}
                     <p className="text-lg shimmer">Preparing your property...</p>
                 </div>
-                
-                {/* Ground/grass at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-green-600 to-transparent flex items-end justify-center gap-3 text-4xl pb-4">
-                    <span className="plant-grow-1">🌻</span>
-                    <span className="plant-grow-2">🌷</span>
-                    <span className="plant-grow-3">🌸</span>
-                    <span className="plant-grow-1" style={{animationDelay: '0.9s'}}>🌺</span>
-                    <span className="plant-grow-2" style={{animationDelay: '1.2s'}}>🌼</span>
-                </div>
             </div>
         );
     }
