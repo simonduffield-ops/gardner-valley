@@ -426,6 +426,17 @@ function PropertyManager() {
                     </div>
                 </div>
                 
+                {/* Singing bird - positioned at bottom like sun at top */}
+                <div className="absolute bottom-20 flex justify-center items-center w-full">
+                    <div className="relative bird-hop">
+                        <div className="text-6xl">🐤</div>
+                        {/* Music notes */}
+                        <div className="absolute -top-4 -right-10 text-2xl music-note music-note-1">♪</div>
+                        <div className="absolute -top-8 -right-3 text-xl music-note music-note-2">♫</div>
+                        <div className="absolute -top-10 -right-8 text-lg music-note music-note-3">♪</div>
+                    </div>
+                </div>
+                
                 {/* Main content */}
                 <div className="text-center text-white relative z-10 -mt-8">
                     {/* House with float animation */}
@@ -442,18 +453,7 @@ function PropertyManager() {
                     </div>
                     
                     {/* Loading text */}
-                    <p className="text-lg shimmer mb-6">Preparing your property...</p>
-                    
-                    {/* Singing bird */}
-                    <div className="flex justify-center items-center gap-2">
-                        <div className="relative">
-                            <div className="text-5xl bird-hop">🕊️</div>
-                            {/* Music notes */}
-                            <div className="absolute -top-3 -right-8 text-2xl music-note music-note-1">♪</div>
-                            <div className="absolute -top-6 -right-2 text-xl music-note music-note-2">♫</div>
-                            <div className="absolute -top-8 -right-6 text-lg music-note music-note-3">♪</div>
-                        </div>
-                    </div>
+                    <p className="text-lg shimmer">Preparing your property...</p>
                 </div>
             </div>
         );
