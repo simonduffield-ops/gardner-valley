@@ -1087,6 +1087,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddSection, setShowAddSection] = useState(false);
     const [newSectionName, setNewSectionName] = useState('');
     const [editingItem, setEditingItem] = useState(null);
+    const [logbookExpanded, setLogbookExpanded] = useState(false);
     const draggedRef = useRef(null);
     const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -1541,30 +1542,32 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 )}
             </div>
 
-            {/* Items */}
+            {/* Active Items (not completed) */}
             <div className="space-y-2">
-                {data.lists[activeList].map((item, index) => (
-                    item.is_section ? (
+                {data.lists[activeList].filter(item => !item.completed).map((item, index) => {
+                    // Get the actual index in the full array for drag operations
+                    const actualIndex = data.lists[activeList].indexOf(item);
+                    return item.is_section ? (
                         // Section Header
                         <div
                             key={item.id}
-                            data-item-index={index}
+                            data-item-index={actualIndex}
                             draggable
-                            onDragStart={(e) => handleDesktopDragStart(e, index)}
-                            onDragOver={(e) => handleDesktopDragOver(e, index)}
+                            onDragStart={(e) => handleDesktopDragStart(e, actualIndex)}
+                            onDragOver={(e) => handleDesktopDragOver(e, actualIndex)}
                             onDragEnd={handleDesktopDragEnd}
                             className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all select-none ${
-                                draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
+                                draggedItem === actualIndex ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
                             style={{
-                                cursor: draggedItem === index ? 'grabbing' : 'default',
+                                cursor: draggedItem === actualIndex ? 'grabbing' : 'default',
                                 WebkitUserSelect: 'none',
                                 userSelect: 'none'
                             }}
                         >
                             <div 
                                 className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
-                                onTouchStart={(e) => handleDragHandleTouchStart(e, index)}
+                                onTouchStart={(e) => handleDragHandleTouchStart(e, actualIndex)}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
@@ -1584,23 +1587,23 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         // Regular Item
                         <div
                             key={item.id}
-                            data-item-index={index}
+                            data-item-index={actualIndex}
                             draggable
-                            onDragStart={(e) => handleDesktopDragStart(e, index)}
-                            onDragOver={(e) => handleDesktopDragOver(e, index)}
+                            onDragStart={(e) => handleDesktopDragStart(e, actualIndex)}
+                            onDragOver={(e) => handleDesktopDragOver(e, actualIndex)}
                             onDragEnd={handleDesktopDragEnd}
                             className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
-                                draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
+                                draggedItem === actualIndex ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
                             style={{
-                                cursor: draggedItem === index ? 'grabbing' : 'default',
+                                cursor: draggedItem === actualIndex ? 'grabbing' : 'default',
                                 WebkitUserSelect: 'none',
                                 userSelect: 'none'
                             }}
                         >
                             <div 
                                 className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
-                                onTouchStart={(e) => handleDragHandleTouchStart(e, index)}
+                                onTouchStart={(e) => handleDragHandleTouchStart(e, actualIndex)}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
@@ -1629,14 +1632,64 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                                 {item.text}
                             </span>
                         </div>
-                    )
-                ))}
-                {data.lists[activeList].length === 0 && (
+                    );
+                })}
+                {data.lists[activeList].filter(item => !item.completed).length === 0 && (
                     <div className="text-center text-gray-400 py-8">
                         No items yet. Add your first item above!
                     </div>
                 )}
             </div>
+
+            {/* Logbook Section - Completed Tasks */}
+            {data.lists[activeList].filter(item => item.completed && !item.is_section).length > 0 && (
+                <div className="mt-6">
+                    <button
+                        onClick={() => setLogbookExpanded(!logbookExpanded)}
+                        className="w-full bg-gray-100 hover:bg-gray-200 p-4 rounded-lg flex items-center justify-between transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">📖</span>
+                            <div className="text-left">
+                                <h3 className="font-bold text-gray-800">Logbook</h3>
+                                <p className="text-sm text-gray-500">
+                                    {data.lists[activeList].filter(item => item.completed && !item.is_section).length} completed {data.lists[activeList].filter(item => item.completed && !item.is_section).length === 1 ? 'task' : 'tasks'}
+                                </p>
+                            </div>
+                        </div>
+                        <svg 
+                            className={`w-6 h-6 text-gray-600 transition-transform ${logbookExpanded ? 'rotate-180' : ''}`}
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    {logbookExpanded && (
+                        <div className="mt-2 space-y-2">
+                            {data.lists[activeList].filter(item => item.completed && !item.is_section).map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="bg-gray-50 p-4 rounded-lg flex items-center gap-3"
+                                >
+                                    <button
+                                        onClick={() => toggleItem(item.id)}
+                                        className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 bg-emerald-500 border-emerald-500"
+                                    >
+                                        <Icons.Check />
+                                    </button>
+                                    <span className="flex-1 line-through text-gray-500">
+                                        {item.text}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
 
             {/* Edit Item Dialog */}
             {editingItem && (
