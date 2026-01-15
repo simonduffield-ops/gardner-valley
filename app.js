@@ -441,19 +441,19 @@ function PropertyManager() {
                         <span className="plant-grow-3">🌾</span>
                     </div>
                     
+                    {/* Loading text */}
+                    <p className="text-lg shimmer mb-6">Preparing your property...</p>
+                    
                     {/* Singing bird */}
-                    <div className="flex justify-center items-center gap-2 my-6">
+                    <div className="flex justify-center items-center gap-2">
                         <div className="relative">
-                            <div className="text-4xl bird-hop">🐦</div>
+                            <div className="text-5xl bird-hop">🕊️</div>
                             {/* Music notes */}
-                            <div className="absolute -top-2 -right-6 text-2xl music-note music-note-1">♪</div>
-                            <div className="absolute -top-4 right-0 text-xl music-note music-note-2">♫</div>
-                            <div className="absolute -top-6 -right-4 text-lg music-note music-note-3">♪</div>
+                            <div className="absolute -top-3 -right-8 text-2xl music-note music-note-1">♪</div>
+                            <div className="absolute -top-6 -right-2 text-xl music-note music-note-2">♫</div>
+                            <div className="absolute -top-8 -right-6 text-lg music-note music-note-3">♪</div>
                         </div>
                     </div>
-                    
-                    {/* Loading text */}
-                    <p className="text-lg shimmer">Preparing your property...</p>
                 </div>
             </div>
         );
