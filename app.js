@@ -1387,6 +1387,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     // Desktop drag handlers
     const handleDesktopDragStart = (e, index) => {
+        draggedRef.current = index;
         setDraggedItem(index);
         if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = 'move';
@@ -1395,13 +1396,14 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const handleDesktopDragOver = (e, index) => {
         e.preventDefault();
-        if (draggedItem === null || draggedItem === index) return;
+        if (draggedRef.current === null || draggedRef.current === index) return;
         
-        reorderItems(draggedItem, index);
-        setDraggedItem(index);
+        reorderItems(draggedRef.current, index);
+        draggedRef.current = index;
     };
 
     const handleDesktopDragEnd = () => {
+        draggedRef.current = null;
         setDraggedItem(null);
     };
 
@@ -2021,6 +2023,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     // Desktop drag handlers
     const handleDesktopDragStart = (e, index) => {
+        draggedRef.current = index;
         setDraggedItem(index);
         if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = 'move';
@@ -2029,13 +2032,14 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     const handleDesktopDragOver = (e, index) => {
         e.preventDefault();
-        if (draggedItem === null || draggedItem === index) return;
+        if (draggedRef.current === null || draggedRef.current === index) return;
         
-        reorderItems(draggedItem, index);
-        setDraggedItem(index);
+        reorderItems(draggedRef.current, index);
+        draggedRef.current = index;
     };
 
     const handleDesktopDragEnd = () => {
+        draggedRef.current = null;
         setDraggedItem(null);
     };
 
