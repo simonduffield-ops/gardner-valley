@@ -1584,20 +1584,15 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         <div
                             key={item.id}
                             data-item-index={actualIndex}
-                            draggable
-                            onDragStart={(e) => handleDesktopDragStart(e, actualIndex)}
                             onDragOver={(e) => handleDesktopDragOver(e, actualIndex)}
-                            onDragEnd={handleDesktopDragEnd}
-                            className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all select-none ${
+                            className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all ${
                                 draggedItem === actualIndex ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
-                            style={{
-                                cursor: draggedItem === actualIndex ? 'grabbing' : 'default',
-                                WebkitUserSelect: 'none',
-                                userSelect: 'none'
-                            }}
                         >
                             <div 
+                                draggable={true}
+                                onDragStart={(e) => handleDesktopDragStart(e, actualIndex)}
+                                onDragEnd={handleDesktopDragEnd}
                                 className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
                                 onTouchStart={(e) => handleDragHandleTouchStart(e, actualIndex)}
                             >
@@ -1620,20 +1615,15 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         <div
                             key={item.id}
                             data-item-index={actualIndex}
-                            draggable
-                            onDragStart={(e) => handleDesktopDragStart(e, actualIndex)}
                             onDragOver={(e) => handleDesktopDragOver(e, actualIndex)}
-                            onDragEnd={handleDesktopDragEnd}
-                            className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
+                            className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all ${
                                 draggedItem === actualIndex ? 'opacity-50 scale-105 shadow-xl' : ''
                             }`}
-                            style={{
-                                cursor: draggedItem === actualIndex ? 'grabbing' : 'default',
-                                WebkitUserSelect: 'none',
-                                userSelect: 'none'
-                            }}
                         >
                             <div 
+                                draggable={true}
+                                onDragStart={(e) => handleDesktopDragStart(e, actualIndex)}
+                                onDragEnd={handleDesktopDragEnd}
                                 className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
                                 onTouchStart={(e) => handleDragHandleTouchStart(e, actualIndex)}
                             >
@@ -2194,20 +2184,15 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     <div
                         key={item.id}
                         data-item-index={index}
-                        draggable
-                        onDragStart={(e) => handleDesktopDragStart(e, index)}
                         onDragOver={(e) => handleDesktopDragOver(e, index)}
-                        onDragEnd={handleDesktopDragEnd}
-                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all select-none ${
+                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all ${
                             draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
                         }`}
-                        style={{
-                            cursor: draggedItem === index ? 'grabbing' : 'default',
-                            WebkitUserSelect: 'none',
-                            userSelect: 'none'
-                        }}
                     >
                         <div 
+                            draggable={true}
+                            onDragStart={(e) => handleDesktopDragStart(e, index)}
+                            onDragEnd={handleDesktopDragEnd}
                             className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
                             onTouchStart={(e) => handleDragHandleTouchStart(e, index)}
                         >

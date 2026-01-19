@@ -33,3 +33,6 @@ function isSupabaseConfigured() {
            SUPABASE_CONFIG.anonKey !== 'YOUR_SUPABASE_ANON_KEY';
 }
 
+// Make functions available globally
+window.initSupabase = initSupabase;
+window.isSupabaseConfigured = isSupabaseConfigured;
