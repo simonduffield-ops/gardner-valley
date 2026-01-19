@@ -1112,7 +1112,7 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
 }
 
 function ListsView({ data, setData, showToast, useBackend, updateData }) {
-    const [activeList, setActiveList] = useState('shopping');
+    const [activeList, setActiveList] = useState('tasks');
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
@@ -1131,7 +1131,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const pendingSave = useRef(false);
 
     const listTypes = [
-        { id: 'shopping', label: 'Shopping' },
         { id: 'tasks', label: 'Tasks' },
         { id: 'projects', label: 'Projects' },
         { id: 'thingsToBuy', label: 'Things to Buy' },
