@@ -352,7 +352,7 @@ function PropertyManager() {
     const handleOpenMaps = (e) => {
         e.preventDefault();
         
-        const address = "Gardner Valley"; // You can customize this
+        const address = "Two One Four"; // You can customize this
         const googleMapsUrl = "https://maps.app.goo.gl/4c9phER1pxvepQjy7";
         
         // Detect platform
@@ -443,7 +443,7 @@ function PropertyManager() {
                     <div className="text-7xl mb-6 float-anim">🏡</div>
                     
                     {/* Title */}
-                    <h2 className="text-3xl font-bold mb-6 drop-shadow-lg">Gardner Valley</h2>
+                    <h2 className="text-3xl font-bold mb-6 drop-shadow-lg">Two One Four</h2>
                     
                     {/* Growing plants */}
                     <div className="flex justify-center gap-4 text-5xl mb-4">
@@ -478,7 +478,7 @@ function PropertyManager() {
                     >
                         <Icons.MapPin />
                     </button>
-                    <h1 className="text-xl font-bold">Gardner Valley</h1>
+                    <h1 className="text-xl font-bold">Two One Four</h1>
                 </div>
             </header>
 
