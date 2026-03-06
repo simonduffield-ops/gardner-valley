@@ -1,7 +1,7 @@
-const CACHE_NAME = 'gardner-valley-v23';
-const STATIC_CACHE = 'gardner-valley-static-v23';
-const DYNAMIC_CACHE = 'gardner-valley-dynamic-v23';
-const CDN_CACHE = 'gardner-valley-cdn-v23';
+const CACHE_NAME = 'gardner-valley-v24';
+const STATIC_CACHE = 'gardner-valley-static-v24';
+const DYNAMIC_CACHE = 'gardner-valley-dynamic-v24';
+const CDN_CACHE = 'gardner-valley-cdn-v24';
 
 // Static assets that rarely change
 const staticAssets = [
@@ -19,11 +19,12 @@ const largeAssets = [
 ];
 
 // CDN resources with longer cache
+// Note: cdn.tailwindcss.com is intentionally excluded — it sets no CORS headers
+// and cannot be fetched cross-origin from a Service Worker.
 const cdnAssets = [
     'https://unpkg.com/react@18/umd/react.production.min.js',
     'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
     'https://unpkg.com/@babel/standalone/babel.min.js',
-    'https://cdn.tailwindcss.com',
     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
@@ -81,8 +82,9 @@ self.addEventListener('fetch', event => {
                 if (cached) return cached;
                 return fetch(request).then(response => {
                     if (response.ok) {
+                        const responseToCache = response.clone();
                         caches.open(CDN_CACHE).then(cache => {
-                            cache.put(request, response.clone());
+                            cache.put(request, responseToCache);
                         });
                     }
                     return response;
@@ -104,9 +106,10 @@ self.addEventListener('fetch', event => {
                 .then(response => {
                     // Only cache successful responses
                     if (response.ok) {
+                        const responseToCache = response.clone();
                         const cacheName = request.url.includes('.png') ? DYNAMIC_CACHE : STATIC_CACHE;
                         caches.open(cacheName).then(cache => {
-                            cache.put(request, response.clone());
+                            cache.put(request, responseToCache);
                         });
                     }
                     return response;
