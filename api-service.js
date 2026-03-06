@@ -53,8 +53,9 @@ class PropertyAPI {
 
     // Initialize Supabase connection
     async initialize() {
-        if (!initSupabase()) {
-            console.log('Supabase not configured, using localStorage fallback');
+        const ready = await waitForSupabase();
+        if (!ready) {
+            console.log('Supabase not available, using localStorage fallback');
             return false;
         }
 

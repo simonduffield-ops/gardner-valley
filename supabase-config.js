@@ -27,6 +27,33 @@ function initSupabase() {
     return true;
 }
 
+// Async version that waits for the Supabase CDN library to load before giving up.
+// On slow mobile connections the defer'd CDN script may not have executed yet
+// when initSupabase() is first called, causing a silent fallback to localStorage.
+function waitForSupabase(timeoutMs = 10000) {
+    return new Promise((resolve) => {
+        if (initSupabase()) {
+            resolve(true);
+            return;
+        }
+        const interval = 100;
+        let elapsed = 0;
+        const timer = setInterval(() => {
+            elapsed += interval;
+            if (initSupabase()) {
+                clearInterval(timer);
+                resolve(true);
+            } else if (elapsed >= timeoutMs) {
+                clearInterval(timer);
+                console.warn('Timed out waiting for Supabase library to load');
+                resolve(false);
+            }
+        }, interval);
+    });
+}
+
+window.waitForSupabase = waitForSupabase;
+
 // Check if Supabase is configured
 function isSupabaseConfigured() {
     return SUPABASE_CONFIG.url !== 'YOUR_SUPABASE_URL' && 
