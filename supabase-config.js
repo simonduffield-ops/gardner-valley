@@ -8,12 +8,14 @@ const SUPABASE_CONFIG = {
 };
 
 // Initialize Supabase client (will be loaded from CDN)
-let supabase = null;
+// Stored on window to avoid shadowing window.supabase (set by the CDN library),
+// which caused "Identifier 'supabase' has already been declared" when defer'd.
+window._supabaseClient = null;
 
 function initSupabase() {
-    if (typeof supabase === 'undefined' || supabase === null) {
+    if (window._supabaseClient === null) {
         if (window.supabase && SUPABASE_CONFIG.url !== 'YOUR_SUPABASE_URL') {
-            supabase = window.supabase.createClient(
+            window._supabaseClient = window.supabase.createClient(
                 SUPABASE_CONFIG.url,
                 SUPABASE_CONFIG.anonKey
             );

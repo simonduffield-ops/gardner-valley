@@ -1,7 +1,7 @@
-const CACHE_NAME = 'gardner-valley-v24';
-const STATIC_CACHE = 'gardner-valley-static-v24';
-const DYNAMIC_CACHE = 'gardner-valley-dynamic-v24';
-const CDN_CACHE = 'gardner-valley-cdn-v24';
+const CACHE_NAME = 'gardner-valley-v25';
+const STATIC_CACHE = 'gardner-valley-static-v25';
+const DYNAMIC_CACHE = 'gardner-valley-dynamic-v25';
+const CDN_CACHE = 'gardner-valley-cdn-v25';
 
 // Static assets that rarely change
 const staticAssets = [

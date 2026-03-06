@@ -80,7 +80,7 @@ class PropertyAPI {
 
         return this.dedupedRequest(cacheKey, async () => {
             try {
-                const { data, error } = await supabase
+                const { data, error } = await window._supabaseClient
                     .from('map_markers')
                     .select('*')
                     .order('created_at');
@@ -97,7 +97,7 @@ class PropertyAPI {
 
     async addMapMarker(marker) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('map_markers')
                 .insert({
                     x: marker.x,
@@ -119,7 +119,7 @@ class PropertyAPI {
 
     async updateMapMarker(id, updates) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('map_markers')
                 .update(updates)
                 .eq('id', id)
@@ -137,7 +137,7 @@ class PropertyAPI {
 
     async deleteMapMarker(id) {
         try {
-            const { error } = await supabase
+            const { error } = await window._supabaseClient
                 .from('map_markers')
                 .delete()
                 .eq('id', id);
@@ -155,7 +155,7 @@ class PropertyAPI {
 
     async getContacts() {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('contacts')
                 .select('*')
                 .order('category', { ascending: true })
@@ -170,7 +170,7 @@ class PropertyAPI {
 
     async addContact(contact) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('contacts')
                 .insert({
                     category: contact.category,
@@ -190,7 +190,7 @@ class PropertyAPI {
 
     async updateContact(id, updates) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('contacts')
                 .update(updates)
                 .eq('id', id)
@@ -206,7 +206,7 @@ class PropertyAPI {
 
     async deleteContact(id) {
         try {
-            const { error } = await supabase
+            const { error } = await window._supabaseClient
                 .from('contacts')
                 .delete()
                 .eq('id', id);
@@ -222,7 +222,7 @@ class PropertyAPI {
 
     async getListItems(listType) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('list_items')
                 .select('*')
                 .eq('list_type', listType)
@@ -238,7 +238,7 @@ class PropertyAPI {
 
     async getAllLists() {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('list_items')
                 .select('*')
                 .order('sort_order', { ascending: true });
@@ -269,7 +269,7 @@ class PropertyAPI {
 
     async addListItem(listType, item) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('list_items')
                 .insert({
                     list_type: listType,
@@ -292,7 +292,7 @@ class PropertyAPI {
 
     async updateListItem(id, updates) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('list_items')
                 .update(updates)
                 .eq('id', id)
@@ -308,7 +308,7 @@ class PropertyAPI {
 
     async deleteListItem(id) {
         try {
-            const { error } = await supabase
+            const { error } = await window._supabaseClient
                 .from('list_items')
                 .delete()
                 .eq('id', id);
@@ -324,7 +324,7 @@ class PropertyAPI {
 
     async getCalendarBookings() {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('calendar_bookings')
                 .select('*')
                 .order('start_date', { ascending: true });
@@ -345,7 +345,7 @@ class PropertyAPI {
 
     async addCalendarBooking(booking) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('calendar_bookings')
                 .insert({
                     start_date: booking.startDate,
@@ -377,7 +377,7 @@ class PropertyAPI {
             if (updates.guest) dbUpdates.guest = updates.guest;
             if (updates.status) dbUpdates.status = updates.status;
 
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('calendar_bookings')
                 .update(dbUpdates)
                 .eq('id', id)
@@ -399,7 +399,7 @@ class PropertyAPI {
 
     async deleteCalendarBooking(id) {
         try {
-            const { error } = await supabase
+            const { error } = await window._supabaseClient
                 .from('calendar_bookings')
                 .delete()
                 .eq('id', id);
@@ -415,7 +415,7 @@ class PropertyAPI {
 
     async getDocuments() {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('documents')
                 .select('*')
                 .order('upload_date', { ascending: false });
@@ -434,7 +434,7 @@ class PropertyAPI {
 
     async addDocument(document) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('documents')
                 .insert({
                     name: document.name,
@@ -464,7 +464,7 @@ class PropertyAPI {
             if (updates.category) dbUpdates.category = updates.category;
             if (updates.name) dbUpdates.name = updates.name;
 
-            const { data, error } = await supabase
+            const { data, error } = await window._supabaseClient
                 .from('documents')
                 .update(dbUpdates)
                 .eq('id', id)
@@ -484,7 +484,7 @@ class PropertyAPI {
 
     async deleteDocument(id) {
         try {
-            const { error } = await supabase
+            const { error } = await window._supabaseClient
                 .from('documents')
                 .delete()
                 .eq('id', id);
