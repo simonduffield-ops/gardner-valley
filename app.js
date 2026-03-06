@@ -282,14 +282,20 @@ function PropertyManager() {
             
             if (backendAvailable) {
                 try {
-                    await propertyAPI.initialize();
-                    console.log('Backend initialized, loading from Supabase...');
-                    
-                    // Load all data from backend
-                    const backendData = await propertyAPI.getAllData();
-                    setData(backendData);
-                    setUseBackend(true);
-                    console.log('Data loaded from backend:', backendData);
+                    const initialized = await propertyAPI.initialize();
+                    if (!initialized) {
+                        console.warn('Supabase library failed to load (CDN timeout), falling back to localStorage');
+                        setUseBackend(false);
+                        loadFromLocalStorage();
+                    } else {
+                        console.log('Backend initialized, loading from Supabase...');
+                        
+                        // Load all data from backend
+                        const backendData = await propertyAPI.getAllData();
+                        setData(backendData);
+                        setUseBackend(true);
+                        console.log('Data loaded from backend:', backendData);
+                    }
                 } catch (error) {
                     console.error('Failed to load from backend, falling back to localStorage:', error);
                     setUseBackend(false);
