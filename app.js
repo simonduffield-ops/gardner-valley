@@ -328,20 +328,11 @@ function PropertyManager() {
     // On iOS Safari, WebSocket connections are dropped when the app is backgrounded,
     // so we reconnect and do a fresh fetch whenever the page becomes visible again.
     //
-    // lastLocalWriteRef is stamped whenever this session writes to the DB so that
-    // Realtime events triggered by our own mutations don't cause a redundant reload
-    // that races with (and can overwrite) the optimistic UI update.
-    const lastLocalWriteRef = React.useRef(0);
-    const markLocalWrite = React.useCallback(() => {
-        lastLocalWriteRef.current = Date.now();
-    }, []);
-
-    // Wrap setData so that direct mutation calls (addItem etc.) automatically
-    // stamp lastLocalWriteRef, preventing the Realtime handler from reloading.
-    const setDataAndMark = React.useCallback((newData) => {
-        lastLocalWriteRef.current = Date.now();
-        setData(newData);
-    }, []);
+    // All local mutations go through updateData which sets syncing=true for the
+    // duration, so the Realtime handler simply skips events while syncing is true
+    // (those events are echoes of our own writes, not changes from other users).
+    const syncingRef = React.useRef(false);
+    useEffect(() => { syncingRef.current = syncing; }, [syncing]);
 
     useEffect(() => {
         if (!useBackend) return;
@@ -352,9 +343,7 @@ function PropertyManager() {
         const scheduleReload = () => {
             clearTimeout(reloadTimeout);
             reloadTimeout = setTimeout(async () => {
-                // Skip if this session wrote within the last 2 seconds — the event
-                // is almost certainly from our own mutation, not a remote user.
-                if (Date.now() - lastLocalWriteRef.current < 2000) return;
+                if (syncingRef.current) return; // our own write, not a remote change
                 try {
                     const backendData = await propertyAPI.getAllData();
                     setData(backendData);
@@ -456,7 +445,6 @@ function PropertyManager() {
     const updateData = useCallback(async (updateFn) => {
         if (useBackend) {
             setSyncing(true);
-            markLocalWrite();
         }
         try {
             await updateFn();
@@ -473,7 +461,7 @@ function PropertyManager() {
                 setSyncing(false);
             }
         }
-    }, [useBackend, showToast, markLocalWrite]);
+    }, [useBackend, showToast]);
 
     // Memoize tabs array to prevent re-creation on every render
     const tabs = useMemo(() => [
@@ -555,12 +543,12 @@ function PropertyManager() {
 
             {/* Content */}
             <main key={activeTab} className="flex-1 overflow-y-auto pb-20" style={{ WebkitOverflowScrolling: 'touch' }}>
-                {activeTab === 'map' && <MapView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'info' && <InfoView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'lists' && <ListsView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'reference' && <ReferenceListsView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'calendar' && <CalendarView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'documents' && <DocumentsView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'map' && <MapView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'info' && <InfoView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'lists' && <ListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'reference' && <ReferenceListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'calendar' && <CalendarView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'documents' && <DocumentsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
             </main>
 
             {/* Bottom Navigation */}
@@ -749,55 +737,29 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
 
     const addMarker = async () => {
         if (!newMarker.label) return;
-        
-        if (useBackend) {
-            try {
-                const addedMarker = await propertyAPI.addMapMarker(newMarker);
-                // Optimistic update - add to UI immediately
-                setData({ ...data, mapMarkers: [...data.mapMarkers, addedMarker] });
-            } catch (error) {
-                console.error('Error adding marker:', error);
-                showToast('Failed to add marker', 'error');
-                return;
-            }
-        } else {
-            const marker = {
-                id: generateId(),
-                ...newMarker,
-            };
-            setData({ ...data, mapMarkers: [...data.mapMarkers, marker] });
-        }
-        
+        const markerToAdd = { ...newMarker };
         setNewMarker({ x: 50, y: 50, label: '', type: 'tree' });
         setShowAddMarker(false);
+        await updateData(async () => {
+            if (useBackend) {
+                await propertyAPI.addMapMarker(markerToAdd);
+            } else {
+                setData(prev => ({ ...prev, mapMarkers: [...prev.mapMarkers, { id: generateId(), ...markerToAdd }] }));
+            }
+        });
         showToast('Marker added successfully!');
     };
 
     const deleteMarker = async (id) => {
-        const deletedMarker = data.mapMarkers.find(m => m.id === id);
-        
-        // Optimistic update - remove from UI immediately
-        setData({
-            ...data,
-            mapMarkers: data.mapMarkers.filter(m => m.id !== id),
-        });
-        
         setConfirmDelete(null);
-        showToast('Marker deleted');
-        
-        if (useBackend) {
-            try {
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.deleteMapMarker(id);
-            } catch (error) {
-                console.error('Error deleting marker:', error);
-                showToast('Failed to delete marker', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    mapMarkers: [...data.mapMarkers, deletedMarker],
-                });
+            } else {
+                setData(prev => ({ ...prev, mapMarkers: prev.mapMarkers.filter(m => m.id !== id) }));
             }
-        }
+        });
+        showToast('Marker deleted');
     };
 
     return (
@@ -949,80 +911,42 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
 
     const addContact = async () => {
         if (!newContact.name || !newContact.value) return;
-        
-        if (useBackend) {
-            try {
-                const addedContact = await propertyAPI.addContact(newContact);
-                // Optimistic update - add to UI immediately
-                setData({ ...data, contacts: [...data.contacts, addedContact] });
-            } catch (error) {
-                console.error('Error adding contact:', error);
-                showToast('Failed to add contact', 'error');
-                return;
-            }
-        } else {
-            const contact = { id: generateId(), ...newContact };
-            setData({ ...data, contacts: [...data.contacts, contact] });
-        }
-        
+        const contactToAdd = { ...newContact };
         setNewContact({ category: 'Utilities', name: '', value: '' });
         setShowAddContact(false);
+        await updateData(async () => {
+            if (useBackend) {
+                await propertyAPI.addContact(contactToAdd);
+            } else {
+                setData(prev => ({ ...prev, contacts: [...prev.contacts, { id: generateId(), ...contactToAdd }] }));
+            }
+        });
         showToast('Contact added successfully!');
     };
 
     const deleteContact = async (id) => {
-        const deletedContact = data.contacts.find(c => c.id === id);
-        
-        // Optimistic update - remove from UI immediately
-        setData({
-            ...data,
-            contacts: data.contacts.filter(c => c.id !== id),
-        });
-        
         setConfirmDelete(null);
-        showToast('Contact deleted');
-        
-        if (useBackend) {
-            try {
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.deleteContact(id);
-            } catch (error) {
-                console.error('Error deleting contact:', error);
-                showToast('Failed to delete contact', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    contacts: [...data.contacts, deletedContact],
-                });
+            } else {
+                setData(prev => ({ ...prev, contacts: prev.contacts.filter(c => c.id !== id) }));
             }
-        }
+        });
+        showToast('Contact deleted');
     };
 
     const updateContact = async (id, field, value) => {
-        const oldValue = data.contacts.find(c => c.id === id)?.[field];
-        
-        // Optimistic update - update UI immediately
-        setData({
-            ...data,
-            contacts: data.contacts.map(c =>
-                c.id === id ? { ...c, [field]: value } : c
-            ),
-        });
-        
-        if (useBackend) {
-            try {
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.updateContact(id, { [field]: value });
-            } catch (error) {
-                console.error('Error updating contact:', error);
-                showToast('Failed to update contact', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    contacts: data.contacts.map(c =>
-                        c.id === id ? { ...c, [field]: oldValue } : c
-                    ),
-                });
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    contacts: prev.contacts.map(c => c.id === id ? { ...c, [field]: value } : c),
+                }));
             }
-        }
+        });
     };
 
     const groupedContacts = data.contacts.reduce((acc, contact) => {
@@ -1209,224 +1133,102 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const addItem = async () => {
         if (!newItemText.trim()) return;
-        
-        const newItem = {
-            text: newItemText,
-            completed: false,
-            is_section: false,
-        };
-        
-        if (useBackend) {
-            try {
-                const addedItem = await propertyAPI.addListItem(activeList, newItem);
-                // Optimistic update - add to UI immediately
-                setData({
-                    ...data,
-                    lists: {
-                        ...data.lists,
-                        [activeList]: [...data.lists[activeList], addedItem],
-                    },
-                });
-            } catch (error) {
-                console.error('Error adding item:', error);
-                showToast('Failed to add item', 'error');
-                return;
-            }
-        } else {
-            newItem.id = generateId();
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: [...data.lists[activeList], newItem],
-                },
-            });
-        }
-        
+        const text = newItemText;
         setNewItemText('');
+        await updateData(async () => {
+            const newItem = { text, completed: false, is_section: false };
+            if (useBackend) {
+                await propertyAPI.addListItem(activeList, newItem);
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    lists: { ...prev.lists, [activeList]: [...prev.lists[activeList], { ...newItem, id: generateId() }] },
+                }));
+            }
+        });
         showToast('Item added!');
     };
 
     const addSection = async () => {
         if (!newSectionName.trim()) return;
-        
-        const newSection = {
-            text: newSectionName,
-            is_section: true,
-            completed: false,
-        };
-        
-        if (useBackend) {
-            try {
-                const addedSection = await propertyAPI.addListItem(activeList, newSection);
-                // Optimistic update - add to UI immediately
-                setData({
-                    ...data,
-                    lists: {
-                        ...data.lists,
-                        [activeList]: [...data.lists[activeList], addedSection],
-                    },
-                });
-            } catch (error) {
-                console.error('Error adding section:', error);
-                showToast('Failed to add section', 'error');
-                return;
-            }
-        } else {
-            newSection.id = generateId();
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: [...data.lists[activeList], newSection],
-                },
-            });
-        }
-        
+        const text = newSectionName;
         setNewSectionName('');
         setShowAddSection(false);
+        await updateData(async () => {
+            const newSection = { text, is_section: true, completed: false };
+            if (useBackend) {
+                await propertyAPI.addListItem(activeList, newSection);
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    lists: { ...prev.lists, [activeList]: [...prev.lists[activeList], { ...newSection, id: generateId() }] },
+                }));
+            }
+        });
         showToast('Section added!');
     };
 
     const toggleItem = async (id) => {
         const item = data.lists[activeList].find(i => i.id === id);
         const newValue = !item.completed;
-        
-        // Optimistic update - update UI immediately
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].map(item =>
-                    item.id === id
-                        ? { ...item, completed: !item.completed }
-                        : item
-                ),
-            },
-        });
-        
-        // Sync with backend in background WITHOUT reloading all data
-        if (useBackend) {
-            try {
-                // Just update the backend, no need to reload everything
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.updateListItem(id, { completed: newValue });
-            } catch (error) {
-                console.error('Error updating item:', error);
-                showToast('Failed to update item', 'error');
-                // Revert on error
-                setData({
-                    ...data,
+            } else {
+                setData(prev => ({
+                    ...prev,
                     lists: {
-                        ...data.lists,
-                        [activeList]: data.lists[activeList].map(item =>
-                            item.id === id
-                                ? { ...item, completed: !newValue }
-                                : item
-                        ),
+                        ...prev.lists,
+                        [activeList]: prev.lists[activeList].map(i => i.id === id ? { ...i, completed: newValue } : i),
                     },
-                });
+                }));
             }
-        }
+        });
     };
 
     const deleteItem = async (id) => {
-        // Store the item in case we need to revert
-        const deletedItem = data.lists[activeList].find(item => item.id === id);
-        const deletedIndex = data.lists[activeList].findIndex(item => item.id === id);
-        
-        // Optimistic update - remove from UI immediately
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].filter(item => item.id !== id),
-            },
-        });
-        
         setConfirmDelete(null);
-        showToast('Item deleted');
-        
-        // Sync with backend in background
-        if (useBackend) {
-            try {
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.deleteListItem(id);
-            } catch (error) {
-                console.error('Error deleting item:', error);
-                showToast('Failed to delete item', 'error');
-                // Revert on error - restore the item
-                setData({
-                    ...data,
-                    lists: {
-                        ...data.lists,
-                        [activeList]: [
-                            ...data.lists[activeList].slice(0, deletedIndex),
-                            deletedItem,
-                            ...data.lists[activeList].slice(deletedIndex)
-                        ],
-                    },
-                });
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    lists: { ...prev.lists, [activeList]: prev.lists[activeList].filter(item => item.id !== id) },
+                }));
             }
-        }
+        });
+        showToast('Item deleted');
     };
 
     const updateItem = async () => {
         if (!editingItem.text.trim()) return;
-        
-        const oldItem = data.lists[activeList].find(i => i.id === editingItem.id);
-        
-        // Optimistic update - update UI immediately
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].map(i =>
-                    i.id === editingItem.id ? editingItem : i
-                ),
-            },
-        });
-        
+        const item = { ...editingItem };
         setEditingItem(null);
-        showToast('Item updated');
-        
-        // Sync with backend in background
-        if (useBackend) {
-            try {
-                await propertyAPI.updateListItem(editingItem.id, {
-                    text: editingItem.text,
-                });
-            } catch (error) {
-                console.error('Error updating item:', error);
-                showToast('Failed to update item', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    lists: {
-                        ...data.lists,
-                        [activeList]: data.lists[activeList].map(i =>
-                            i.id === editingItem.id ? oldItem : i
-                        ),
-                    },
-                });
+        await updateData(async () => {
+            if (useBackend) {
+                await propertyAPI.updateListItem(item.id, { text: item.text });
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    lists: { ...prev.lists, [activeList]: prev.lists[activeList].map(i => i.id === item.id ? item : i) },
+                }));
             }
-        }
+        });
+        showToast('Item updated');
     };
 
     // Save all items' sort order to backend (debounced)
     const saveOrderToBackend = async (items) => {
         if (!useBackend) return;
-        
-        try {
-            // Single batch update - only affected items
+        await updateData(async () => {
             await Promise.all(
-                items.map((item, index) => 
+                items.map((item, index) =>
                     propertyAPI.updateListItem(item.id, { sort_order: index })
                 )
             );
             pendingSave.current = false;
-        } catch (error) {
-            console.error('Error saving order:', error);
-            showToast('Failed to save order', 'error');
-        }
+        });
     };
 
     const reorderItems = (startIndex, endIndex) => {
@@ -1434,21 +1236,16 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const [removed] = items.splice(startIndex, 1);
         items.splice(endIndex, 0, removed);
 
-        // Optimistic update - UI updates immediately
+        // Keep local state in sync while dragging for smooth UX
         setData({
             ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: items,
-            },
+            lists: { ...data.lists, [activeList]: items },
         });
 
-        // Debounce the save - wait until user stops dragging
+        // Debounce the backend save - wait until user stops dragging
         if (useBackend) {
             pendingSave.current = true;
             clearTimeout(saveOrderTimer.current);
-            
-            // Save 300ms after last reorder (user stopped dragging)
             saveOrderTimer.current = setTimeout(() => {
                 saveOrderToBackend(items);
             }, 300);
@@ -1861,208 +1658,101 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     const addItem = async () => {
         if (!newItemText.trim()) return;
-        
-        const newItem = {
-            text: newItemText,
-            checked: false,
-        };
-        
-        if (useBackend) {
-            try {
-                const addedItem = await propertyAPI.addListItem(activeList, newItem);
-                // Optimistic update - add to UI immediately
-                setData({
-                    ...data,
-                    lists: {
-                        ...data.lists,
-                        [activeList]: [...data.lists[activeList], addedItem],
-                    },
-                });
-            } catch (error) {
-                console.error('Error adding item:', error);
-                showToast('Failed to add item', 'error');
-                return;
-            }
-        } else {
-            newItem.id = generateId();
-            setData({
-                ...data,
-                lists: {
-                    ...data.lists,
-                    [activeList]: [...data.lists[activeList], newItem],
-                },
-            });
-        }
-        
+        const text = newItemText;
         setNewItemText('');
+        await updateData(async () => {
+            const newItem = { text, checked: false };
+            if (useBackend) {
+                await propertyAPI.addListItem(activeList, newItem);
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    lists: { ...prev.lists, [activeList]: [...prev.lists[activeList], { ...newItem, id: generateId() }] },
+                }));
+            }
+        });
         showToast('Item added!');
     };
 
     const toggleItem = async (id) => {
         const item = data.lists[activeList].find(i => i.id === id);
         const newValue = !item.checked;
-        
-        // Optimistic update - update UI immediately
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].map(item =>
-                    item.id === id
-                        ? { ...item, checked: !item.checked }
-                        : item
-                ),
-            },
-        });
-        
-        // Sync with backend in background WITHOUT reloading all data
-        if (useBackend) {
-            try {
-                // Just update the backend, no need to reload everything
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.updateListItem(id, { checked: newValue });
-            } catch (error) {
-                console.error('Error updating item:', error);
-                showToast('Failed to update item', 'error');
-                // Revert on error
-                setData({
-                    ...data,
+            } else {
+                setData(prev => ({
+                    ...prev,
                     lists: {
-                        ...data.lists,
-                        [activeList]: data.lists[activeList].map(item =>
-                            item.id === id
-                                ? { ...item, checked: !newValue }
-                                : item
-                        ),
+                        ...prev.lists,
+                        [activeList]: prev.lists[activeList].map(i => i.id === id ? { ...i, checked: newValue } : i),
                     },
-                });
+                }));
             }
-        }
+        });
     };
 
     const deleteItem = async (id) => {
-        // Store the item in case we need to revert
-        const deletedItem = data.lists[activeList].find(item => item.id === id);
-        const deletedIndex = data.lists[activeList].findIndex(item => item.id === id);
-        
-        // Optimistic update - remove from UI immediately
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].filter(item => item.id !== id),
-            },
-        });
-        
         setConfirmDelete(null);
-        showToast('Item deleted');
-        
-        // Sync with backend in background
-        if (useBackend) {
-            try {
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.deleteListItem(id);
-            } catch (error) {
-                console.error('Error deleting item:', error);
-                showToast('Failed to delete item', 'error');
-                // Revert on error - restore the item
-                setData({
-                    ...data,
-                    lists: {
-                        ...data.lists,
-                        [activeList]: [
-                            ...data.lists[activeList].slice(0, deletedIndex),
-                            deletedItem,
-                            ...data.lists[activeList].slice(deletedIndex)
-                        ],
-                    },
-                });
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    lists: { ...prev.lists, [activeList]: prev.lists[activeList].filter(item => item.id !== id) },
+                }));
             }
-        }
+        });
+        showToast('Item deleted');
     };
 
     const updateItem = async () => {
         if (!editingItem.text.trim()) return;
-        
-        const oldItem = data.lists[activeList].find(i => i.id === editingItem.id);
-        
-        // Optimistic update - update UI immediately
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].map(i =>
-                    i.id === editingItem.id ? editingItem : i
-                ),
-            },
-        });
-        
+        const item = { ...editingItem };
         setEditingItem(null);
-        showToast('Item updated');
-        
-        // Sync with backend in background
-        if (useBackend) {
-            try {
-                await propertyAPI.updateListItem(editingItem.id, {
-                    text: editingItem.text,
-                });
-            } catch (error) {
-                console.error('Error updating item:', error);
-                showToast('Failed to update item', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    lists: {
-                        ...data.lists,
-                        [activeList]: data.lists[activeList].map(i =>
-                            i.id === editingItem.id ? oldItem : i
-                        ),
-                    },
-                });
+        await updateData(async () => {
+            if (useBackend) {
+                await propertyAPI.updateListItem(item.id, { text: item.text });
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    lists: { ...prev.lists, [activeList]: prev.lists[activeList].map(i => i.id === item.id ? item : i) },
+                }));
             }
-        }
+        });
+        showToast('Item updated');
     };
 
     const uncheckAll = async () => {
-        // Optimistic update - update UI immediately
-        setData({
-            ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: data.lists[activeList].map(item => ({ ...item, checked: false })),
-            },
-        });
-        
-        showToast('All items unchecked');
-        
-        // Sync with backend in background
-        if (useBackend) {
-            try {
-                const updatePromises = data.lists[activeList].map(item => 
-                    propertyAPI.updateListItem(item.id, { checked: false })
-                );
-                await Promise.all(updatePromises);
-            } catch (error) {
-                console.error('Error unchecking all items:', error);
-                showToast('Failed to sync changes', 'error');
+        const itemIds = data.lists[activeList].map(i => i.id);
+        await updateData(async () => {
+            if (useBackend) {
+                await Promise.all(itemIds.map(id => propertyAPI.updateListItem(id, { checked: false })));
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    lists: {
+                        ...prev.lists,
+                        [activeList]: prev.lists[activeList].map(item => ({ ...item, checked: false })),
+                    },
+                }));
             }
-        }
+        });
+        showToast('All items unchecked');
     };
 
     // Save all items' sort order to backend (debounced)
     const saveOrderToBackend = async (items) => {
         if (!useBackend) return;
-        
-        try {
-            // Single batch update - only affected items
+        await updateData(async () => {
             await Promise.all(
-                items.map((item, index) => 
+                items.map((item, index) =>
                     propertyAPI.updateListItem(item.id, { sort_order: index })
                 )
             );
             pendingSave.current = false;
-        } catch (error) {
-            console.error('Error saving order:', error);
-            showToast('Failed to save order', 'error');
-        }
+        });
     };
 
     const reorderItems = (startIndex, endIndex) => {
@@ -2070,16 +1760,13 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         const [removed] = items.splice(startIndex, 1);
         items.splice(endIndex, 0, removed);
 
-        // Optimistic update - UI updates immediately
+        // Keep local state in sync while dragging for smooth UX
         setData({
             ...data,
-            lists: {
-                ...data.lists,
-                [activeList]: items,
-            },
+            lists: { ...data.lists, [activeList]: items },
         });
 
-        // Debounce the save - wait until user stops dragging
+        // Debounce the backend save - wait until user stops dragging
         if (useBackend) {
             pendingSave.current = true;
             clearTimeout(saveOrderTimer.current);
@@ -2470,106 +2157,57 @@ function CalendarView({ data, setData, showToast, useBackend, updateData }) {
 
     const addBooking = async () => {
         if (!newBooking.startDate || !newBooking.endDate || !newBooking.guest) return;
-        
-        if (useBackend) {
-            try {
-                const addedBooking = await propertyAPI.addCalendarBooking(newBooking);
-                // Optimistic update - add to UI immediately
-                setData({
-                    ...data,
-                    calendar: [...data.calendar, addedBooking].sort((a, b) =>
-                        new Date(a.startDate) - new Date(b.startDate)
-                    ),
-                });
-            } catch (error) {
-                console.error('Error adding booking:', error);
-                showToast('Failed to add booking', 'error');
-                return;
-            }
-        } else {
-            const booking = {
-                id: generateId(),
-                ...newBooking,
-            };
-            
-            setData({
-                ...data,
-                calendar: [...data.calendar, booking].sort((a, b) =>
-                    new Date(a.startDate) - new Date(b.startDate)
-                ),
-            });
-        }
-        
+        const bookingToAdd = { ...newBooking };
         setNewBooking({ startDate: '', endDate: '', guest: '', status: 'Booked' });
         setShowAddBooking(false);
+        await updateData(async () => {
+            if (useBackend) {
+                await propertyAPI.addCalendarBooking(bookingToAdd);
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    calendar: [...prev.calendar, { id: generateId(), ...bookingToAdd }].sort((a, b) =>
+                        new Date(a.startDate) - new Date(b.startDate)
+                    ),
+                }));
+            }
+        });
         showToast('Booking added successfully!');
     };
 
     const updateBooking = async () => {
         if (!editingBooking.startDate || !editingBooking.endDate || !editingBooking.guest) return;
-        
-        const oldBooking = data.calendar.find(b => b.id === editingBooking.id);
-        
-        // Optimistic update - update UI immediately
-        setData({
-            ...data,
-            calendar: data.calendar.map(b => 
-                b.id === editingBooking.id ? editingBooking : b
-            ).sort((a, b) => new Date(a.startDate) - new Date(b.startDate)),
-        });
-        
+        const booking = { ...editingBooking };
         setEditingBooking(null);
-        showToast('Booking updated successfully!');
-        
-        if (useBackend) {
-            try {
-                await propertyAPI.updateCalendarBooking(editingBooking.id, {
-                    startDate: editingBooking.startDate,
-                    endDate: editingBooking.endDate,
-                    guest: editingBooking.guest,
-                    status: editingBooking.status,
+        await updateData(async () => {
+            if (useBackend) {
+                await propertyAPI.updateCalendarBooking(booking.id, {
+                    startDate: booking.startDate,
+                    endDate: booking.endDate,
+                    guest: booking.guest,
+                    status: booking.status,
                 });
-            } catch (error) {
-                console.error('Error updating booking:', error);
-                showToast('Failed to update booking', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    calendar: data.calendar.map(b => 
-                        b.id === editingBooking.id ? oldBooking : b
-                    ).sort((a, b) => new Date(a.startDate) - new Date(b.startDate)),
-                });
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    calendar: prev.calendar.map(b => b.id === booking.id ? booking : b)
+                        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate)),
+                }));
             }
-        }
+        });
+        showToast('Booking updated successfully!');
     };
 
     const deleteBooking = async (id) => {
-        const deletedBooking = data.calendar.find(b => b.id === id);
-        
-        // Optimistic update - remove from UI immediately
-        setData({
-            ...data,
-            calendar: data.calendar.filter(b => b.id !== id),
-        });
-        
         setConfirmDelete(null);
-        showToast('Booking deleted');
-        
-        if (useBackend) {
-            try {
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.deleteCalendarBooking(id);
-            } catch (error) {
-                console.error('Error deleting booking:', error);
-                showToast('Failed to delete booking', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    calendar: [...data.calendar, deletedBooking].sort((a, b) =>
-                        new Date(a.startDate) - new Date(b.startDate)
-                    ),
-                });
+            } else {
+                setData(prev => ({ ...prev, calendar: prev.calendar.filter(b => b.id !== id) }));
             }
-        }
+        });
+        showToast('Booking deleted');
     };
 
     const formatDate = (dateString) => {
@@ -3045,11 +2683,8 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
 
                 if (useBackend) {
                     try {
-                        const addedDoc = await propertyAPI.addDocument(doc);
-                        // Optimistic update - add to UI immediately
-                        setData({
-                            ...data,
-                            documents: [...data.documents, addedDoc],
+                        await updateData(async () => {
+                            await propertyAPI.addDocument(doc);
                         });
                     } catch (uploadError) {
                         console.error('Error uploading to backend:', uploadError);
@@ -3107,31 +2742,16 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const deleteDocument = async (id) => {
-        const deletedDoc = data.documents.find(d => d.id === id);
-        
-        // Optimistic update - remove from UI immediately
-        setData({
-            ...data,
-            documents: data.documents.filter(d => d.id !== id),
-        });
-        
         setViewingDoc(null);
         setConfirmDelete(null);
-        showToast('Document deleted');
-        
-        if (useBackend) {
-            try {
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.deleteDocument(id);
-            } catch (error) {
-                console.error('Error deleting document:', error);
-                showToast('Failed to delete document', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    documents: [...data.documents, deletedDoc],
-                });
+            } else {
+                setData(prev => ({ ...prev, documents: prev.documents.filter(d => d.id !== id) }));
             }
-        }
+        });
+        showToast('Document deleted');
     };
 
     const downloadDocument = (doc) => {
@@ -3182,31 +2802,16 @@ function DocumentsView({ data, setData, showToast, useBackend, updateData }) {
     };
 
     const updateDocCategory = async (id, newCategory) => {
-        const oldCategory = data.documents.find(d => d.id === id)?.category;
-        
-        // Optimistic update - update UI immediately
-        setData({
-            ...data,
-            documents: data.documents.map(d =>
-                d.id === id ? { ...d, category: newCategory } : d
-            ),
-        });
-        
-        if (useBackend) {
-            try {
+        await updateData(async () => {
+            if (useBackend) {
                 await propertyAPI.updateDocument(id, { category: newCategory });
-            } catch (error) {
-                console.error('Error updating document category:', error);
-                showToast('Failed to update category', 'error');
-                // Revert on error
-                setData({
-                    ...data,
-                    documents: data.documents.map(d =>
-                        d.id === id ? { ...d, category: oldCategory } : d
-                    ),
-                });
+            } else {
+                setData(prev => ({
+                    ...prev,
+                    documents: prev.documents.map(d => d.id === id ? { ...d, category: newCategory } : d),
+                }));
             }
-        }
+        });
     };
 
     const filteredDocs = selectedCategory === 'All'
