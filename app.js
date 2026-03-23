@@ -327,8 +327,21 @@ function PropertyManager() {
     // Realtime: subscribe to remote changes and reload data.
     // On iOS Safari, WebSocket connections are dropped when the app is backgrounded,
     // so we reconnect and do a fresh fetch whenever the page becomes visible again.
-    const syncingRef = React.useRef(syncing);
-    useEffect(() => { syncingRef.current = syncing; }, [syncing]);
+    //
+    // lastLocalWriteRef is stamped whenever this session writes to the DB so that
+    // Realtime events triggered by our own mutations don't cause a redundant reload
+    // that races with (and can overwrite) the optimistic UI update.
+    const lastLocalWriteRef = React.useRef(0);
+    const markLocalWrite = React.useCallback(() => {
+        lastLocalWriteRef.current = Date.now();
+    }, []);
+
+    // Wrap setData so that direct mutation calls (addItem etc.) automatically
+    // stamp lastLocalWriteRef, preventing the Realtime handler from reloading.
+    const setDataAndMark = React.useCallback((newData) => {
+        lastLocalWriteRef.current = Date.now();
+        setData(newData);
+    }, []);
 
     useEffect(() => {
         if (!useBackend) return;
@@ -339,7 +352,9 @@ function PropertyManager() {
         const scheduleReload = () => {
             clearTimeout(reloadTimeout);
             reloadTimeout = setTimeout(async () => {
-                if (syncingRef.current) return; // skip if we triggered the change ourselves
+                // Skip if this session wrote within the last 2 seconds — the event
+                // is almost certainly from our own mutation, not a remote user.
+                if (Date.now() - lastLocalWriteRef.current < 2000) return;
                 try {
                     const backendData = await propertyAPI.getAllData();
                     setData(backendData);
@@ -441,6 +456,7 @@ function PropertyManager() {
     const updateData = useCallback(async (updateFn) => {
         if (useBackend) {
             setSyncing(true);
+            markLocalWrite();
         }
         try {
             await updateFn();
@@ -457,7 +473,7 @@ function PropertyManager() {
                 setSyncing(false);
             }
         }
-    }, [useBackend, showToast]);
+    }, [useBackend, showToast, markLocalWrite]);
 
     // Memoize tabs array to prevent re-creation on every render
     const tabs = useMemo(() => [
@@ -539,12 +555,12 @@ function PropertyManager() {
 
             {/* Content */}
             <main key={activeTab} className="flex-1 overflow-y-auto pb-20" style={{ WebkitOverflowScrolling: 'touch' }}>
-                {activeTab === 'map' && <MapView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'info' && <InfoView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'lists' && <ListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'reference' && <ReferenceListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'calendar' && <CalendarView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'documents' && <DocumentsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'map' && <MapView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'info' && <InfoView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'lists' && <ListsView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'reference' && <ReferenceListsView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'calendar' && <CalendarView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'documents' && <DocumentsView data={data} setData={setDataAndMark} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
             </main>
 
             {/* Bottom Navigation */}
