@@ -446,6 +446,7 @@ function PropertyManager() {
     // while the DB write + reload happens in the background.
     const updateData = useCallback(async (updateFn, optimisticUpdate) => {
         if (useBackend) {
+            syncingRef.current = true; // set synchronously so realtime handler skips echoes immediately
             setSyncing(true);
             if (optimisticUpdate) optimisticUpdate();
         }
@@ -460,6 +461,7 @@ function PropertyManager() {
             showToast('Failed to sync data. Please try again.', 'error');
         } finally {
             if (useBackend) {
+                syncingRef.current = false;
                 setSyncing(false);
             }
         }
@@ -1425,7 +1427,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         placeholder={`Add to ${listTypes.find(t => t.id === activeList)?.label}`}
                         value={newItemText}
                         onChange={(e) => setNewItemText(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && addItem()}
+                        onKeyDown={(e) => e.key === 'Enter' && addItem()}
                         className="flex-1 p-2 border rounded"
                     />
                     <button
@@ -1463,7 +1465,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             placeholder="Section name (e.g., 'Produce', 'Dairy')"
                             value={newSectionName}
                             onChange={(e) => setNewSectionName(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && addSection()}
+                            onKeyDown={(e) => e.key === 'Enter' && addSection()}
                             className="flex-1 p-2 border rounded text-sm"
                         />
                         <button
@@ -1639,7 +1641,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             placeholder={editingItem.is_section ? "Section name" : "Item text"}
                             value={editingItem.text}
                             onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
-                            onKeyPress={(e) => e.key === 'Enter' && updateItem()}
+                            onKeyDown={(e) => e.key === 'Enter' && updateItem()}
                             className="w-full p-2 border rounded mb-4"
                             autoFocus
                         />
@@ -1981,7 +1983,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                         placeholder={`Add to ${listTypes.find(t => t.id === activeList)?.label}`}
                         value={newItemText}
                         onChange={(e) => setNewItemText(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && addItem()}
+                        onKeyDown={(e) => e.key === 'Enter' && addItem()}
                         className="flex-1 p-2 border rounded"
                     />
                     <button
@@ -2064,7 +2066,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                             placeholder="Item text"
                             value={editingItem.text}
                             onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
-                            onKeyPress={(e) => e.key === 'Enter' && updateItem()}
+                            onKeyDown={(e) => e.key === 'Enter' && updateItem()}
                             className="w-full p-2 border rounded mb-4"
                             autoFocus
                         />
