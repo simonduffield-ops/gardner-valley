@@ -1136,37 +1136,59 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const addItem = async () => {
         if (!newItemText.trim()) return;
         const text = newItemText;
+        const listName = activeList;
+        const tempId = generateId();
         setNewItemText('');
-        await updateData(async () => {
-            const newItem = { text, completed: false, is_section: false };
-            if (useBackend) {
-                await propertyAPI.addListItem(activeList, newItem);
-            } else {
-                setData(prev => ({
-                    ...prev,
-                    lists: { ...prev.lists, [activeList]: [...prev.lists[activeList], { ...newItem, id: generateId() }] },
-                }));
-            }
-        });
+        await updateData(
+            async () => {
+                const newItem = { text, completed: false, is_section: false };
+                if (useBackend) {
+                    await propertyAPI.addListItem(listName, newItem);
+                } else {
+                    setData(prev => ({
+                        ...prev,
+                        lists: { ...prev.lists, [listName]: [...prev.lists[listName], { ...newItem, id: generateId() }] },
+                    }));
+                }
+            },
+            () => setData(prev => ({
+                ...prev,
+                lists: {
+                    ...prev.lists,
+                    [listName]: [...prev.lists[listName], { id: tempId, text, completed: false, is_section: false }],
+                },
+            }))
+        );
         showToast('Item added!');
     };
 
     const addSection = async () => {
         if (!newSectionName.trim()) return;
         const text = newSectionName;
+        const listName = activeList;
+        const tempId = generateId();
         setNewSectionName('');
         setShowAddSection(false);
-        await updateData(async () => {
-            const newSection = { text, is_section: true, completed: false };
-            if (useBackend) {
-                await propertyAPI.addListItem(activeList, newSection);
-            } else {
-                setData(prev => ({
-                    ...prev,
-                    lists: { ...prev.lists, [activeList]: [...prev.lists[activeList], { ...newSection, id: generateId() }] },
-                }));
-            }
-        });
+        await updateData(
+            async () => {
+                const newSection = { text, is_section: true, completed: false };
+                if (useBackend) {
+                    await propertyAPI.addListItem(listName, newSection);
+                } else {
+                    setData(prev => ({
+                        ...prev,
+                        lists: { ...prev.lists, [listName]: [...prev.lists[listName], { ...newSection, id: generateId() }] },
+                    }));
+                }
+            },
+            () => setData(prev => ({
+                ...prev,
+                lists: {
+                    ...prev.lists,
+                    [listName]: [...prev.lists[listName], { id: tempId, text, is_section: true, completed: false }],
+                },
+            }))
+        );
         showToast('Section added!');
     };
 
@@ -1671,18 +1693,29 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const addItem = async () => {
         if (!newItemText.trim()) return;
         const text = newItemText;
+        const listName = activeList;
+        const tempId = generateId();
         setNewItemText('');
-        await updateData(async () => {
-            const newItem = { text, checked: false };
-            if (useBackend) {
-                await propertyAPI.addListItem(activeList, newItem);
-            } else {
-                setData(prev => ({
-                    ...prev,
-                    lists: { ...prev.lists, [activeList]: [...prev.lists[activeList], { ...newItem, id: generateId() }] },
-                }));
-            }
-        });
+        await updateData(
+            async () => {
+                const newItem = { text, checked: false };
+                if (useBackend) {
+                    await propertyAPI.addListItem(listName, newItem);
+                } else {
+                    setData(prev => ({
+                        ...prev,
+                        lists: { ...prev.lists, [listName]: [...prev.lists[listName], { ...newItem, id: generateId() }] },
+                    }));
+                }
+            },
+            () => setData(prev => ({
+                ...prev,
+                lists: {
+                    ...prev.lists,
+                    [listName]: [...prev.lists[listName], { id: tempId, text, checked: false }],
+                },
+            }))
+        );
         showToast('Item added!');
     };
 
