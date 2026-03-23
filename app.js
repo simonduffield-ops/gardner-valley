@@ -324,7 +324,9 @@ function PropertyManager() {
         initializeData();
     }, []);
 
-    // Realtime: subscribe to remote changes and reload data
+    // Realtime: subscribe to remote changes and reload data.
+    // On iOS Safari, WebSocket connections are dropped when the app is backgrounded,
+    // so we reconnect and do a fresh fetch whenever the page becomes visible again.
     const syncingRef = React.useRef(syncing);
     useEffect(() => { syncingRef.current = syncing; }, [syncing]);
 
@@ -332,6 +334,8 @@ function PropertyManager() {
         if (!useBackend) return;
 
         let reloadTimeout = null;
+        let unsubscribe = null;
+
         const scheduleReload = () => {
             clearTimeout(reloadTimeout);
             reloadTimeout = setTimeout(async () => {
@@ -345,10 +349,27 @@ function PropertyManager() {
             }, 300);
         };
 
-        const unsubscribe = propertyAPI.subscribeToChanges(scheduleReload);
+        const connect = () => {
+            if (unsubscribe) unsubscribe();
+            unsubscribe = propertyAPI.subscribeToChanges(scheduleReload);
+        };
+
+        connect();
+
+        // iOS kills WebSocket connections when the app is backgrounded.
+        // Re-subscribe and immediately fetch fresh data when the app comes back.
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                connect();
+                scheduleReload();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         return () => {
             clearTimeout(reloadTimeout);
-            unsubscribe();
+            if (unsubscribe) unsubscribe();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [useBackend]);
 
