@@ -441,15 +441,17 @@ function PropertyManager() {
         setShowMapChoice(false);
     };
 
-    // Helper function to update data with backend sync
-    const updateData = useCallback(async (updateFn) => {
+    // Helper function to update data with backend sync.
+    // Pass an optional `optimisticUpdate` function to update UI immediately
+    // while the DB write + reload happens in the background.
+    const updateData = useCallback(async (updateFn, optimisticUpdate) => {
         if (useBackend) {
             setSyncing(true);
+            if (optimisticUpdate) optimisticUpdate();
         }
         try {
             await updateFn();
             if (useBackend) {
-                // Reload data from backend to ensure consistency
                 const backendData = await propertyAPI.getAllData();
                 setData(backendData);
             }
@@ -1171,19 +1173,29 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const toggleItem = async (id) => {
         const item = data.lists[activeList].find(i => i.id === id);
         const newValue = !item.completed;
-        await updateData(async () => {
-            if (useBackend) {
-                await propertyAPI.updateListItem(id, { completed: newValue });
-            } else {
-                setData(prev => ({
-                    ...prev,
-                    lists: {
-                        ...prev.lists,
-                        [activeList]: prev.lists[activeList].map(i => i.id === id ? { ...i, completed: newValue } : i),
-                    },
-                }));
-            }
-        });
+        const listName = activeList;
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.updateListItem(id, { completed: newValue });
+                } else {
+                    setData(prev => ({
+                        ...prev,
+                        lists: {
+                            ...prev.lists,
+                            [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, completed: newValue } : i),
+                        },
+                    }));
+                }
+            },
+            () => setData(prev => ({
+                ...prev,
+                lists: {
+                    ...prev.lists,
+                    [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, completed: newValue } : i),
+                },
+            }))
+        );
     };
 
     const deleteItem = async (id) => {
@@ -1677,19 +1689,29 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     const toggleItem = async (id) => {
         const item = data.lists[activeList].find(i => i.id === id);
         const newValue = !item.checked;
-        await updateData(async () => {
-            if (useBackend) {
-                await propertyAPI.updateListItem(id, { checked: newValue });
-            } else {
-                setData(prev => ({
-                    ...prev,
-                    lists: {
-                        ...prev.lists,
-                        [activeList]: prev.lists[activeList].map(i => i.id === id ? { ...i, checked: newValue } : i),
-                    },
-                }));
-            }
-        });
+        const listName = activeList;
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.updateListItem(id, { checked: newValue });
+                } else {
+                    setData(prev => ({
+                        ...prev,
+                        lists: {
+                            ...prev.lists,
+                            [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, checked: newValue } : i),
+                        },
+                    }));
+                }
+            },
+            () => setData(prev => ({
+                ...prev,
+                lists: {
+                    ...prev.lists,
+                    [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, checked: newValue } : i),
+                },
+            }))
+        );
     };
 
     const deleteItem = async (id) => {
