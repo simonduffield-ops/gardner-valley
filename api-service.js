@@ -519,6 +519,37 @@ class PropertyAPI {
             this.handleError(error, 'getAllData');
         }
     }
+
+    // ==================== REALTIME ====================
+
+    // Subscribe to all table changes. `onChangeCallback` is called with no
+    // arguments whenever any insert/update/delete lands on the watched tables.
+    // Returns a cleanup function that unsubscribes the channel.
+    subscribeToChanges(onChangeCallback) {
+        const tables = [
+            'map_markers',
+            'contacts',
+            'list_items',
+            'calendar_bookings',
+            'documents',
+        ];
+
+        const channel = window._supabaseClient.channel('realtime:all-tables');
+
+        tables.forEach(table => {
+            channel.on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table },
+                () => { onChangeCallback(); }
+            );
+        });
+
+        channel.subscribe();
+
+        return () => {
+            window._supabaseClient.removeChannel(channel);
+        };
+    }
 }
 
 // Create global instance

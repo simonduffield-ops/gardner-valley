@@ -324,6 +324,34 @@ function PropertyManager() {
         initializeData();
     }, []);
 
+    // Realtime: subscribe to remote changes and reload data
+    const syncingRef = React.useRef(syncing);
+    useEffect(() => { syncingRef.current = syncing; }, [syncing]);
+
+    useEffect(() => {
+        if (!useBackend) return;
+
+        let reloadTimeout = null;
+        const scheduleReload = () => {
+            clearTimeout(reloadTimeout);
+            reloadTimeout = setTimeout(async () => {
+                if (syncingRef.current) return; // skip if we triggered the change ourselves
+                try {
+                    const backendData = await propertyAPI.getAllData();
+                    setData(backendData);
+                } catch (e) {
+                    console.error('Realtime reload failed:', e);
+                }
+            }, 300);
+        };
+
+        const unsubscribe = propertyAPI.subscribeToChanges(scheduleReload);
+        return () => {
+            clearTimeout(reloadTimeout);
+            unsubscribe();
+        };
+    }, [useBackend]);
+
     // Save to localStorage (fallback and cache)
     const debouncedSave = useCallback(
         debounce((dataToSave) => {
