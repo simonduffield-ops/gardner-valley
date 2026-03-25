@@ -67,7 +67,8 @@ class PropertyAPI {
     // Generic error handler
     handleError(error, context) {
         console.error(`Error in ${context}:`, error);
-        this.isOnline = false;
+        // Don't permanently set isOnline=false — a single transient network
+        // error (common on iOS Safari) should not block all future requests.
         throw error;
     }
 
@@ -534,7 +535,11 @@ class PropertyAPI {
             'documents',
         ];
 
-        const channel = window._supabaseClient.channel('realtime:all-tables');
+        // Use a unique channel name each time so that re-subscribing on iOS
+        // (after the WebSocket is killed when the app is backgrounded) creates
+        // a genuinely new channel rather than conflicting with the old one.
+        const channelName = `realtime:all-tables:${Date.now()}`;
+        const channel = window._supabaseClient.channel(channelName);
 
         tables.forEach(table => {
             channel.on(

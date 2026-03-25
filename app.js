@@ -269,7 +269,7 @@ function PropertyManager() {
     const [toast, setToast] = useState(null);
     const [useBackend, setUseBackend] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [syncing, setSyncing] = useState(false);
+
     const [showMapChoice, setShowMapChoice] = useState(false);
 
     // Initialize - check for Supabase and load data
@@ -328,11 +328,9 @@ function PropertyManager() {
     // On iOS Safari, WebSocket connections are dropped when the app is backgrounded,
     // so we reconnect and do a fresh fetch whenever the page becomes visible again.
     //
-    // All local mutations go through updateData which sets syncing=true for the
-    // duration, so the Realtime handler simply skips events while syncing is true
-    // (those events are echoes of our own writes, not changes from other users).
+    // syncingRef is set synchronously in updateData so the Realtime handler
+    // skips echoes of our own writes without waiting for a React state cycle.
     const syncingRef = React.useRef(false);
-    useEffect(() => { syncingRef.current = syncing; }, [syncing]);
 
     useEffect(() => {
         if (!useBackend) return;
@@ -345,6 +343,7 @@ function PropertyManager() {
             reloadTimeout = setTimeout(async () => {
                 if (syncingRef.current) return; // our own write, not a remote change
                 try {
+                    propertyAPI.clearCache();
                     const backendData = await propertyAPI.getAllData();
                     setData(backendData);
                 } catch (e) {
@@ -442,27 +441,33 @@ function PropertyManager() {
     };
 
     // Helper function to update data with backend sync.
-    // Pass an optional `optimisticUpdate` function to update UI immediately
-    // while the DB write + reload happens in the background.
+    // Applies the optimistic update immediately, fires the DB write in the
+    // background, and relies on the Realtime subscription to push any
+    // corrections from other users. No post-write full re-fetch means zero
+    // visible delay for the person making the change.
     const updateData = useCallback(async (updateFn, optimisticUpdate) => {
         if (useBackend) {
             syncingRef.current = true; // set synchronously so realtime handler skips echoes immediately
-            setSyncing(true);
             if (optimisticUpdate) optimisticUpdate();
         }
         try {
             await updateFn();
-            if (useBackend) {
-                const backendData = await propertyAPI.getAllData();
-                setData(backendData);
-            }
         } catch (error) {
             console.error('Error updating data:', error);
             showToast('Failed to sync data. Please try again.', 'error');
+            // On failure, do a full re-fetch to restore consistent state
+            if (useBackend) {
+                try {
+                    propertyAPI.clearCache();
+                    const backendData = await propertyAPI.getAllData();
+                    setData(backendData);
+                } catch (e) {
+                    console.error('Failed to restore state after error:', e);
+                }
+            }
         } finally {
             if (useBackend) {
                 syncingRef.current = false;
-                setSyncing(false);
             }
         }
     }, [useBackend, showToast]);
@@ -524,13 +529,6 @@ function PropertyManager() {
 
     return (
         <div className="h-screen flex flex-col bg-gray-50">
-            {/* Sync status indicator */}
-            {syncing && (
-                <div className="fixed top-4 left-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm flex items-center gap-2">
-                    <div className="animate-spin">⟳</div>
-                    <span>Syncing...</span>
-                </div>
-            )}
             {/* Header */}
             <header className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-4 shadow-lg">
                 <div className="flex items-center gap-2">
