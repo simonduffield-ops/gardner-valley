@@ -441,24 +441,39 @@ function PropertyManager() {
     };
 
     // Helper function to update data with backend sync.
-    // Optimistic-first: applies the UI change immediately, then writes to the DB
-    // in the background. On success the optimistic state stands — no re-fetch,
-    // no flash. On failure the state is restored from the DB and an error is shown.
-    // syncingRef gates the Realtime echo of our own write so we don't double-reload.
-    const updateData = useCallback(async (updateFn, optimisticUpdate) => {
+    // 1. Optimistic update applied immediately — zero visible delay.
+    // 2. DB write awaited.
+    // 3. After a short delay (gives Postgres time to commit and replicate),
+    //    fetch fresh data for just the affected lists and update state.
+    //    This replaces temp IDs with real DB IDs and confirms the write.
+    // 4. syncingRef stays true for the whole duration (write + delay + fetch)
+    //    so Realtime echoes of our own write are ignored throughout.
+    // 5. On error, full DB restore + error toast.
+    const updateData = useCallback(async (updateFn, optimisticUpdate, affectedLists = null) => {
         if (useBackend) {
             syncingRef.current = true;
             if (optimisticUpdate) optimisticUpdate();
         }
         try {
             await updateFn();
-            // Success: optimistic state is correct — nothing more to do.
-            // Realtime will eventually echo this write back; syncingRef ensures
-            // we ignore that echo so the UI doesn't flicker.
+            if (useBackend) {
+                // Brief pause so Postgres has time to commit before we read back.
+                await new Promise(r => setTimeout(r, 400));
+                if (affectedLists && affectedLists.length > 0) {
+                    const updatedLists = {};
+                    await Promise.all(affectedLists.map(async (listName) => {
+                        updatedLists[listName] = await propertyAPI.getListItems(listName);
+                    }));
+                    setData(prev => ({ ...prev, lists: { ...prev.lists, ...updatedLists } }));
+                } else {
+                    propertyAPI.clearCache();
+                    const backendData = await propertyAPI.getAllData();
+                    setData(backendData);
+                }
+            }
         } catch (error) {
             console.error('Error updating data:', error);
             showToast('Failed to sync data. Please try again.', 'error');
-            // On failure, restore state from the DB so the UI is consistent.
             if (useBackend) {
                 try {
                     propertyAPI.clearCache();
@@ -1160,7 +1175,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     ...prev.lists,
                     [listName]: [...prev.lists[listName], { id: tempId, text, completed: false, is_section: false }],
                 },
-            }))
+            })),
+            [listName]
         );
         showToast('Item added!');
     };
@@ -1190,7 +1206,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     ...prev.lists,
                     [listName]: [...prev.lists[listName], { id: tempId, text, is_section: true, completed: false }],
                 },
-            }))
+            })),
+            [listName]
         );
         showToast('Section added!');
     };
@@ -1219,7 +1236,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     ...prev.lists,
                     [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, completed: newValue } : i),
                 },
-            }))
+            })),
+            [listName]
         );
     };
 
@@ -1240,7 +1258,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             () => setData(prev => ({
                 ...prev,
                 lists: { ...prev.lists, [listName]: prev.lists[listName].filter(item => item.id !== id) },
-            }))
+            })),
+            [listName]
         );
         showToast('Item deleted');
     };
@@ -1264,7 +1283,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             () => setData(prev => ({
                 ...prev,
                 lists: { ...prev.lists, [listName]: prev.lists[listName].map(i => i.id === item.id ? item : i) },
-            }))
+            })),
+            [listName]
         );
         showToast('Item updated');
     };
@@ -1282,7 +1302,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 );
                 pendingSave.current = false;
             },
-            null
+            null,
+            [listName]
         );
     };
 
@@ -1735,7 +1756,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     ...prev.lists,
                     [listName]: [...prev.lists[listName], { id: tempId, text, checked: false }],
                 },
-            }))
+            })),
+            [listName]
         );
         showToast('Item added!');
     };
@@ -1764,7 +1786,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     ...prev.lists,
                     [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, checked: newValue } : i),
                 },
-            }))
+            })),
+            [listName]
         );
     };
 
@@ -1785,7 +1808,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             () => setData(prev => ({
                 ...prev,
                 lists: { ...prev.lists, [listName]: prev.lists[listName].filter(item => item.id !== id) },
-            }))
+            })),
+            [listName]
         );
         showToast('Item deleted');
     };
@@ -1809,7 +1833,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
             () => setData(prev => ({
                 ...prev,
                 lists: { ...prev.lists, [listName]: prev.lists[listName].map(i => i.id === item.id ? item : i) },
-            }))
+            })),
+            [listName]
         );
         showToast('Item updated');
     };
@@ -1837,7 +1862,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     ...prev.lists,
                     [listName]: prev.lists[listName].map(item => ({ ...item, checked: false })),
                 },
-            }))
+            })),
+            [listName]
         );
         showToast('All items unchecked');
     };
@@ -1855,7 +1881,8 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                 );
                 pendingSave.current = false;
             },
-            null
+            null,
+            [listName]
         );
     };
 
