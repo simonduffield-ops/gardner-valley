@@ -444,22 +444,30 @@ function PropertyManager() {
         setShowMapChoice(false);
     };
 
-    // Mutation flow:
-    // 1. Bump mutationEpochRef so any in-flight realtime refetch is discarded.
-    // 2. Apply optimistic update to local state immediately.
-    // 3. Fire the backend write.
-    // 4. After a brief delay, refetch the affected data — but ONLY apply it
-    //    if no newer mutation has started (epoch check).
-    // 5. On error, restore from DB.
-    const updateData = useCallback(async (updateFn, optimisticUpdate, affectedLists = null) => {
+    // updateData — central mutation helper.
+    //
+    // Options object (3rd arg, replaces old affectedLists array):
+    //   affectedLists: string[]  — which lists to refetch (null = refetch all)
+    //   skipRefetch: boolean     — if true, trust the optimistic update and
+    //                              don't refetch after the write.  Use for
+    //                              simple property changes (toggle, text edit)
+    //                              on items that already have a real DB id.
+    //
+    // For backwards compat, passing a plain array as the 3rd arg still works.
+    const updateData = useCallback(async (updateFn, optimisticUpdate, optsOrLists = null) => {
+        const opts = Array.isArray(optsOrLists)
+            ? { affectedLists: optsOrLists }
+            : (optsOrLists || {});
+        const { affectedLists = null, skipRefetch = false } = opts;
+
         const epoch = ++mutationEpochRef.current;
         if (optimisticUpdate) optimisticUpdate();
 
         try {
             await updateFn();
-            if (useBackend) {
+
+            if (useBackend && !skipRefetch) {
                 await new Promise(r => setTimeout(r, 400));
-                // Only apply the refetch if this is still the latest mutation
                 if (mutationEpochRef.current !== epoch) return;
 
                 propertyAPI.clearCache();
@@ -476,6 +484,10 @@ function PropertyManager() {
                     setData(backendData);
                 }
             }
+
+            // Bump epoch again after our refetch (or after write if skipRefetch)
+            // so any trailing realtime echo is discarded.
+            mutationEpochRef.current++;
         } catch (error) {
             console.error('Error updating data:', error);
             showToast('Failed to sync data. Please try again.', 'error');
@@ -1241,7 +1253,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, completed: newValue } : i),
                 },
             })),
-            [listName]
+            { skipRefetch: true }
         );
     };
 
@@ -1263,7 +1275,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 ...prev,
                 lists: { ...prev.lists, [listName]: prev.lists[listName].filter(item => item.id !== id) },
             })),
-            [listName]
+            { affectedLists: [listName] }
         );
         showToast('Item deleted');
     };
@@ -1288,7 +1300,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 ...prev,
                 lists: { ...prev.lists, [listName]: prev.lists[listName].map(i => i.id === item.id ? item : i) },
             })),
-            [listName]
+            { skipRefetch: true }
         );
         showToast('Item updated');
     };
@@ -1296,7 +1308,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     // Save all items' sort order to backend (debounced)
     const saveOrderToBackend = async (items) => {
         if (!useBackend) return;
-        const listName = activeList;
         await updateData(
             async () => {
                 await Promise.all(
@@ -1307,27 +1318,28 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 pendingSave.current = false;
             },
             null,
-            [listName]
+            { skipRefetch: true }
         );
     };
 
     const reorderItems = (startIndex, endIndex) => {
-        const items = Array.from(data.lists[activeList]);
-        const [removed] = items.splice(startIndex, 1);
-        items.splice(endIndex, 0, removed);
-
-        // Keep local state in sync while dragging for smooth UX
-        setData({
-            ...data,
-            lists: { ...data.lists, [activeList]: items },
+        const listName = activeList;
+        setData(prev => {
+            const items = Array.from(prev.lists[listName]);
+            const [removed] = items.splice(startIndex, 1);
+            items.splice(endIndex, 0, removed);
+            return { ...prev, lists: { ...prev.lists, [listName]: items } };
         });
 
-        // Debounce the backend save - wait until user stops dragging
+        const currentItems = Array.from(data.lists[activeList]);
+        const [removed] = currentItems.splice(startIndex, 1);
+        currentItems.splice(endIndex, 0, removed);
+
         if (useBackend) {
             pendingSave.current = true;
             clearTimeout(saveOrderTimer.current);
             saveOrderTimer.current = setTimeout(() => {
-                saveOrderToBackend(items);
+                saveOrderToBackend(currentItems);
             }, 300);
         }
     };
@@ -1793,7 +1805,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, checked: newValue } : i),
                 },
             })),
-            [listName]
+            { skipRefetch: true }
         );
     };
 
@@ -1815,7 +1827,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                 ...prev,
                 lists: { ...prev.lists, [listName]: prev.lists[listName].filter(item => item.id !== id) },
             })),
-            [listName]
+            { affectedLists: [listName] }
         );
         showToast('Item deleted');
     };
@@ -1840,7 +1852,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                 ...prev,
                 lists: { ...prev.lists, [listName]: prev.lists[listName].map(i => i.id === item.id ? item : i) },
             })),
-            [listName]
+            { skipRefetch: true }
         );
         showToast('Item updated');
     };
@@ -1868,7 +1880,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                     [listName]: prev.lists[listName].map(item => ({ ...item, checked: false })),
                 },
             })),
-            [listName]
+            { skipRefetch: true }
         );
         showToast('All items unchecked');
     };
@@ -1876,7 +1888,6 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
     // Save all items' sort order to backend (debounced)
     const saveOrderToBackend = async (items) => {
         if (!useBackend) return;
-        const listName = activeList;
         await updateData(
             async () => {
                 await Promise.all(
@@ -1887,29 +1898,28 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                 pendingSave.current = false;
             },
             null,
-            [listName]
+            { skipRefetch: true }
         );
     };
 
     const reorderItems = (startIndex, endIndex) => {
-        const items = Array.from(data.lists[activeList]);
-        const [removed] = items.splice(startIndex, 1);
-        items.splice(endIndex, 0, removed);
-
-        // Keep local state in sync while dragging for smooth UX
-        setData({
-            ...data,
-            lists: { ...data.lists, [activeList]: items },
+        const listName = activeList;
+        setData(prev => {
+            const items = Array.from(prev.lists[listName]);
+            const [removed] = items.splice(startIndex, 1);
+            items.splice(endIndex, 0, removed);
+            return { ...prev, lists: { ...prev.lists, [listName]: items } };
         });
 
-        // Debounce the backend save - wait until user stops dragging
+        const currentItems = Array.from(data.lists[activeList]);
+        const [removed] = currentItems.splice(startIndex, 1);
+        currentItems.splice(endIndex, 0, removed);
+
         if (useBackend) {
             pendingSave.current = true;
             clearTimeout(saveOrderTimer.current);
-            
-            // Save 300ms after last reorder (user stopped dragging)
             saveOrderTimer.current = setTimeout(() => {
-                saveOrderToBackend(items);
+                saveOrderToBackend(currentItems);
             }, 300);
         }
     };
