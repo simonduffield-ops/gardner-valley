@@ -98,11 +98,15 @@ class PerformanceMonitor {
         };
     }
 
-    // Monitor React component render time
+    // Measure time between successive renders of a component.
+    // Call at the top of a component's render body; it ends the
+    // previous interval and starts a new one.
     logRender(componentName) {
         if (!this.enabled) return;
         const label = `render:${componentName}`;
-        this.end(label);
+        if (this.metrics.has(label)) {
+            this.end(label);
+        }
         this.start(label);
     }
 

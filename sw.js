@@ -1,4 +1,3 @@
-const CACHE_NAME = 'gardner-valley-v25';
 const STATIC_CACHE = 'gardner-valley-static-v25';
 const DYNAMIC_CACHE = 'gardner-valley-dynamic-v25';
 const CDN_CACHE = 'gardner-valley-cdn-v25';
@@ -134,7 +133,7 @@ self.addEventListener('fetch', event => {
 
 // Activate event - clean up old caches and claim clients immediately
 self.addEventListener('activate', event => {
-    const cacheWhitelist = [STATIC_CACHE, DYNAMIC_CACHE, CDN_CACHE, CACHE_NAME];
+    const cacheWhitelist = [STATIC_CACHE, DYNAMIC_CACHE, CDN_CACHE];
     event.waitUntil(
         caches.keys()
             .then(cacheNames => {

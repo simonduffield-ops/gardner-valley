@@ -155,21 +155,30 @@ class PropertyAPI {
     // ==================== CONTACTS ====================
 
     async getContacts() {
-        try {
-            const { data, error } = await window._supabaseClient
-                .from('contacts')
-                .select('*')
-                .order('category', { ascending: true })
-                .order('name', { ascending: true });
+        const cacheKey = this.getCacheKey('contacts');
+        const cached = this.getCached(cacheKey);
+        if (cached) return cached;
 
-            if (error) throw error;
-            return data || [];
-        } catch (error) {
-            this.handleError(error, 'getContacts');
-        }
+        return this.dedupedRequest(cacheKey, async () => {
+            try {
+                const { data, error } = await window._supabaseClient
+                    .from('contacts')
+                    .select('*')
+                    .order('category', { ascending: true })
+                    .order('name', { ascending: true });
+
+                if (error) throw error;
+                const result = data || [];
+                this.setCache(cacheKey, result);
+                return result;
+            } catch (error) {
+                this.handleError(error, 'getContacts');
+            }
+        });
     }
 
     async addContact(contact) {
+        this.cache.delete(this.getCacheKey('contacts'));
         try {
             const { data, error } = await window._supabaseClient
                 .from('contacts')
@@ -190,6 +199,7 @@ class PropertyAPI {
     }
 
     async updateContact(id, updates) {
+        this.cache.delete(this.getCacheKey('contacts'));
         try {
             const { data, error } = await window._supabaseClient
                 .from('contacts')
@@ -206,6 +216,7 @@ class PropertyAPI {
     }
 
     async deleteContact(id) {
+        this.cache.delete(this.getCacheKey('contacts'));
         try {
             const { error } = await window._supabaseClient
                 .from('contacts')
@@ -222,53 +233,73 @@ class PropertyAPI {
     // ==================== LIST ITEMS ====================
 
     async getListItems(listType) {
-        try {
-            const { data, error } = await window._supabaseClient
-                .from('list_items')
-                .select('*')
-                .eq('list_type', listType)
-                .order('sort_order', { ascending: true })
-                .order('created_at', { ascending: true });
+        const cacheKey = this.getCacheKey('list_items', { listType });
+        const cached = this.getCached(cacheKey);
+        if (cached) return cached;
 
-            if (error) throw error;
-            return data || [];
-        } catch (error) {
-            this.handleError(error, 'getListItems');
-        }
+        return this.dedupedRequest(cacheKey, async () => {
+            try {
+                const { data, error } = await window._supabaseClient
+                    .from('list_items')
+                    .select('*')
+                    .eq('list_type', listType)
+                    .order('sort_order', { ascending: true })
+                    .order('created_at', { ascending: true });
+
+                if (error) throw error;
+                const result = data || [];
+                this.setCache(cacheKey, result);
+                return result;
+            } catch (error) {
+                this.handleError(error, 'getListItems');
+            }
+        });
     }
 
     async getAllLists() {
-        try {
-            const { data, error } = await window._supabaseClient
-                .from('list_items')
-                .select('*')
-                .order('sort_order', { ascending: true });
+        const cacheKey = this.getCacheKey('list_items_all');
+        const cached = this.getCached(cacheKey);
+        if (cached) return cached;
 
-            if (error) throw error;
-            
-            // Group by list_type
-            const lists = {
-                leaving: [],
-                projects: [],
-                tasks: [],
-                annual: [],
-                shopping: [],
-                thingsToBuy: []
-            };
+        return this.dedupedRequest(cacheKey, async () => {
+            try {
+                const { data, error } = await window._supabaseClient
+                    .from('list_items')
+                    .select('*')
+                    .order('sort_order', { ascending: true });
 
-            (data || []).forEach(item => {
-                if (lists[item.list_type]) {
-                    lists[item.list_type].push(item);
-                }
-            });
+                if (error) throw error;
+                
+                const lists = {
+                    leaving: [],
+                    projects: [],
+                    tasks: [],
+                    annual: [],
+                    shopping: [],
+                    thingsToBuy: []
+                };
 
-            return lists;
-        } catch (error) {
-            this.handleError(error, 'getAllLists');
-        }
+                (data || []).forEach(item => {
+                    if (lists[item.list_type]) {
+                        lists[item.list_type].push(item);
+                    }
+                });
+
+                this.setCache(cacheKey, lists);
+                return lists;
+            } catch (error) {
+                this.handleError(error, 'getAllLists');
+            }
+        });
+    }
+
+    invalidateListCache(listType) {
+        this.cache.delete(this.getCacheKey('list_items_all'));
+        if (listType) this.cache.delete(this.getCacheKey('list_items', { listType }));
     }
 
     async addListItem(listType, item) {
+        this.invalidateListCache(listType);
         try {
             const { data, error } = await window._supabaseClient
                 .from('list_items')
@@ -292,6 +323,7 @@ class PropertyAPI {
     }
 
     async updateListItem(id, updates) {
+        this.invalidateListCache();
         try {
             const { data, error } = await window._supabaseClient
                 .from('list_items')
@@ -308,6 +340,7 @@ class PropertyAPI {
     }
 
     async uncheckAllListItems(listType) {
+        this.invalidateListCache(listType);
         try {
             const { data, error } = await window._supabaseClient
                 .from('list_items')
@@ -324,6 +357,7 @@ class PropertyAPI {
     }
 
     async deleteListItem(id) {
+        this.invalidateListCache();
         try {
             const { error } = await window._supabaseClient
                 .from('list_items')
@@ -340,27 +374,35 @@ class PropertyAPI {
     // ==================== CALENDAR BOOKINGS ====================
 
     async getCalendarBookings() {
-        try {
-            const { data, error } = await window._supabaseClient
-                .from('calendar_bookings')
-                .select('*')
-                .order('start_date', { ascending: true });
+        const cacheKey = this.getCacheKey('calendar_bookings');
+        const cached = this.getCached(cacheKey);
+        if (cached) return cached;
 
-            if (error) throw error;
-            
-            // Convert dates to strings for compatibility with app
-            return (data || []).map(booking => ({
-                ...booking,
-                startDate: booking.start_date,
-                endDate: booking.end_date,
-                status: booking.status || 'Booked'
-            }));
-        } catch (error) {
-            this.handleError(error, 'getCalendarBookings');
-        }
+        return this.dedupedRequest(cacheKey, async () => {
+            try {
+                const { data, error } = await window._supabaseClient
+                    .from('calendar_bookings')
+                    .select('*')
+                    .order('start_date', { ascending: true });
+
+                if (error) throw error;
+                
+                const result = (data || []).map(booking => ({
+                    ...booking,
+                    startDate: booking.start_date,
+                    endDate: booking.end_date,
+                    status: booking.status || 'Booked'
+                }));
+                this.setCache(cacheKey, result);
+                return result;
+            } catch (error) {
+                this.handleError(error, 'getCalendarBookings');
+            }
+        });
     }
 
     async addCalendarBooking(booking) {
+        this.cache.delete(this.getCacheKey('calendar_bookings'));
         try {
             const { data, error } = await window._supabaseClient
                 .from('calendar_bookings')
@@ -387,6 +429,7 @@ class PropertyAPI {
     }
 
     async updateCalendarBooking(id, updates) {
+        this.cache.delete(this.getCacheKey('calendar_bookings'));
         try {
             const dbUpdates = {};
             if (updates.startDate) dbUpdates.start_date = updates.startDate;
@@ -415,6 +458,7 @@ class PropertyAPI {
     }
 
     async deleteCalendarBooking(id) {
+        this.cache.delete(this.getCacheKey('calendar_bookings'));
         try {
             const { error } = await window._supabaseClient
                 .from('calendar_bookings')
@@ -431,25 +475,33 @@ class PropertyAPI {
     // ==================== DOCUMENTS ====================
 
     async getDocuments() {
-        try {
-            const { data, error } = await window._supabaseClient
-                .from('documents')
-                .select('*')
-                .order('upload_date', { ascending: false });
+        const cacheKey = this.getCacheKey('documents');
+        const cached = this.getCached(cacheKey);
+        if (cached) return cached;
 
-            if (error) throw error;
-            
-            // Convert date field for compatibility
-            return (data || []).map(doc => ({
-                ...doc,
-                uploadDate: doc.upload_date
-            }));
-        } catch (error) {
-            this.handleError(error, 'getDocuments');
-        }
+        return this.dedupedRequest(cacheKey, async () => {
+            try {
+                const { data, error } = await window._supabaseClient
+                    .from('documents')
+                    .select('*')
+                    .order('upload_date', { ascending: false });
+
+                if (error) throw error;
+                
+                const result = (data || []).map(doc => ({
+                    ...doc,
+                    uploadDate: doc.upload_date
+                }));
+                this.setCache(cacheKey, result);
+                return result;
+            } catch (error) {
+                this.handleError(error, 'getDocuments');
+            }
+        });
     }
 
     async addDocument(document) {
+        this.cache.delete(this.getCacheKey('documents'));
         try {
             const { data, error } = await window._supabaseClient
                 .from('documents')
@@ -476,6 +528,7 @@ class PropertyAPI {
     }
 
     async updateDocument(id, updates) {
+        this.cache.delete(this.getCacheKey('documents'));
         try {
             const dbUpdates = {};
             if (updates.category) dbUpdates.category = updates.category;
@@ -500,6 +553,7 @@ class PropertyAPI {
     }
 
     async deleteDocument(id) {
+        this.cache.delete(this.getCacheKey('documents'));
         try {
             const { error } = await window._supabaseClient
                 .from('documents')

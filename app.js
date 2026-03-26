@@ -244,6 +244,16 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
     )),
+    DragHandle: memo(() => (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+        </svg>
+    )),
+    ChevronDown: memo(() => (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+    )),
 };
 
 // Initial data structure
@@ -655,6 +665,14 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 767px)');
+        const handler = (e) => setIsMobile(e.matches);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, []);
 
     const markerColors = {
         tree: 'bg-green-500',
@@ -878,7 +896,7 @@ function MapView({ data, setData, showToast, useBackend, updateData }) {
                         width: '100%',
                         height: '100%',
                         backgroundImage: 'url(gardner-valley-map.png)',
-                        backgroundSize: window.innerWidth < 768 ? 'auto 100%' : 'contain',
+                        backgroundSize: isMobile ? 'auto 100%' : 'contain',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat',
                         transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
@@ -1139,8 +1157,15 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
     );
 }
 
-function ListsView({ data, setData, showToast, useBackend, updateData }) {
-    const [activeList, setActiveList] = useState('tasks');
+// Shared draggable list component used by both ListsView and ReferenceListsView.
+//
+// Config props:
+//   toggleField   – 'completed' or 'checked' (which boolean field to toggle)
+//   hasSections   – whether section headers are supported
+//   hasLogbook    – whether completed items collapse into a logbook
+//   hasUncheckAll – whether an "Uncheck All" button is shown
+function DraggableListView({ data, setData, showToast, useBackend, updateData, title, listTypes, defaultList, toggleField, hasSections, hasLogbook, hasUncheckAll }) {
+    const [activeList, setActiveList] = useState(defaultList);
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [draggedItem, setDraggedItem] = useState(null);
@@ -1149,47 +1174,44 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const [editingItem, setEditingItem] = useState(null);
     const [logbookExpanded, setLogbookExpanded] = useState(false);
     const draggedRef = useRef(null);
-    const longPressTimer = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
-    const isLongPressingRef = useRef(false);
-    const touchStartY = useRef(0);
-    const touchStartX = useRef(0);
-    const hasMoved = useRef(false);
     const saveOrderTimer = useRef(null);
     const pendingSave = useRef(false);
+    const reorderedItemsRef = useRef(null);
 
-    const listTypes = [
-        { id: 'tasks', label: 'Tasks' },
-        { id: 'projects', label: 'Projects' },
-        { id: 'thingsToBuy', label: 'Things to Buy' },
-    ];
+    const items = data.lists[activeList] || [];
+
+    // Optimistic state helper: apply a state update locally and also as
+    // the optimistic callback for updateData, eliminating the old pattern
+    // where the same setData call was written twice.
+    const optimisticListUpdate = useCallback((listName, updater) => {
+        const apply = () => setData(prev => ({
+            ...prev,
+            lists: { ...prev.lists, [listName]: updater(prev.lists[listName]) },
+        }));
+        return apply;
+    }, [setData]);
 
     const addItem = async () => {
         if (!newItemText.trim()) return;
         const text = newItemText;
         const listName = activeList;
         const tempId = generateId();
-        const nextSortOrder = data.lists[listName].length;
+        const nextSortOrder = items.length;
         setNewItemText('');
+
+        const newItem = { text, [toggleField]: false, is_section: false, sort_order: nextSortOrder };
+        const apply = optimisticListUpdate(listName, list => [...list, { ...newItem, id: tempId }]);
+
         await updateData(
             async () => {
-                const newItem = { text, completed: false, is_section: false, sort_order: nextSortOrder };
                 if (useBackend) {
                     await propertyAPI.addListItem(listName, newItem);
                 } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: { ...prev.lists, [listName]: [...prev.lists[listName], { ...newItem, id: generateId() }] },
-                    }));
+                    apply();
                 }
             },
-            () => setData(prev => ({
-                ...prev,
-                lists: {
-                    ...prev.lists,
-                    [listName]: [...prev.lists[listName], { id: tempId, text, completed: false, is_section: false, sort_order: nextSortOrder }],
-                },
-            })),
+            apply,
             [listName]
         );
         showToast('Item added!');
@@ -1200,59 +1222,46 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const text = newSectionName;
         const listName = activeList;
         const tempId = generateId();
-        const nextSortOrder = data.lists[listName].length;
+        const nextSortOrder = items.length;
         setNewSectionName('');
         setShowAddSection(false);
+
+        const newSection = { text, is_section: true, [toggleField]: false, sort_order: nextSortOrder };
+        const apply = optimisticListUpdate(listName, list => [...list, { ...newSection, id: tempId }]);
+
         await updateData(
             async () => {
-                const newSection = { text, is_section: true, completed: false, sort_order: nextSortOrder };
                 if (useBackend) {
                     await propertyAPI.addListItem(listName, newSection);
                 } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: { ...prev.lists, [listName]: [...prev.lists[listName], { ...newSection, id: generateId() }] },
-                    }));
+                    apply();
                 }
             },
-            () => setData(prev => ({
-                ...prev,
-                lists: {
-                    ...prev.lists,
-                    [listName]: [...prev.lists[listName], { id: tempId, text, is_section: true, completed: false, sort_order: nextSortOrder }],
-                },
-            })),
+            apply,
             [listName]
         );
         showToast('Section added!');
     };
 
     const toggleItem = async (id) => {
-        const item = data.lists[activeList].find(i => i.id === id);
+        const item = items.find(i => i.id === id);
         if (!item) return;
-        const newValue = !item.completed;
+        const newValue = !item[toggleField];
         const listName = activeList;
+
+        const apply = optimisticListUpdate(listName, list =>
+            list.map(i => i.id === id ? { ...i, [toggleField]: newValue } : i)
+        );
+
         await updateData(
             async () => {
                 if (useBackend) {
-                    await propertyAPI.updateListItem(id, { completed: newValue });
+                    await propertyAPI.updateListItem(id, { [toggleField]: newValue });
                 } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: {
-                            ...prev.lists,
-                            [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, completed: newValue } : i),
-                        },
-                    }));
+                    apply();
                 }
             },
-            () => setData(prev => ({
-                ...prev,
-                lists: {
-                    ...prev.lists,
-                    [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, completed: newValue } : i),
-                },
-            })),
+            apply,
             { skipRefetch: true }
         );
     };
@@ -1260,21 +1269,18 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const deleteItem = async (id) => {
         const listName = activeList;
         setConfirmDelete(null);
+
+        const apply = optimisticListUpdate(listName, list => list.filter(item => item.id !== id));
+
         await updateData(
             async () => {
                 if (useBackend) {
                     await propertyAPI.deleteListItem(id);
                 } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: { ...prev.lists, [listName]: prev.lists[listName].filter(item => item.id !== id) },
-                    }));
+                    apply();
                 }
             },
-            () => setData(prev => ({
-                ...prev,
-                lists: { ...prev.lists, [listName]: prev.lists[listName].filter(item => item.id !== id) },
-            })),
+            apply,
             { affectedLists: [listName] }
         );
         showToast('Item deleted');
@@ -1285,33 +1291,53 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const item = { ...editingItem };
         const listName = activeList;
         setEditingItem(null);
+
+        const apply = optimisticListUpdate(listName, list =>
+            list.map(i => i.id === item.id ? item : i)
+        );
+
         await updateData(
             async () => {
                 if (useBackend) {
                     await propertyAPI.updateListItem(item.id, { text: item.text });
                 } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: { ...prev.lists, [listName]: prev.lists[listName].map(i => i.id === item.id ? item : i) },
-                    }));
+                    apply();
                 }
             },
-            () => setData(prev => ({
-                ...prev,
-                lists: { ...prev.lists, [listName]: prev.lists[listName].map(i => i.id === item.id ? item : i) },
-            })),
+            apply,
             { skipRefetch: true }
         );
         showToast('Item updated');
     };
 
-    // Save all items' sort order to backend (debounced)
-    const saveOrderToBackend = async (items) => {
+    const uncheckAll = async () => {
+        if (!hasUncheckAll) return;
+        const listName = activeList;
+
+        const apply = optimisticListUpdate(listName, list =>
+            list.map(item => ({ ...item, [toggleField]: false }))
+        );
+
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.uncheckAllListItems(listName);
+                } else {
+                    apply();
+                }
+            },
+            apply,
+            { skipRefetch: true }
+        );
+        showToast('All items unchecked');
+    };
+
+    const saveOrderToBackend = async (orderedItems) => {
         if (!useBackend) return;
         await updateData(
             async () => {
                 await Promise.all(
-                    items.map((item, index) =>
+                    orderedItems.map((item, index) =>
                         propertyAPI.updateListItem(item.id, { sort_order: index })
                     )
                 );
@@ -1322,29 +1348,28 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         );
     };
 
+    // Fix: capture reordered items via setData return value to avoid stale closure
     const reorderItems = (startIndex, endIndex) => {
         const listName = activeList;
         setData(prev => {
-            const items = Array.from(prev.lists[listName]);
-            const [removed] = items.splice(startIndex, 1);
-            items.splice(endIndex, 0, removed);
-            return { ...prev, lists: { ...prev.lists, [listName]: items } };
+            const reordered = Array.from(prev.lists[listName]);
+            const [removed] = reordered.splice(startIndex, 1);
+            reordered.splice(endIndex, 0, removed);
+            reorderedItemsRef.current = reordered;
+            return { ...prev, lists: { ...prev.lists, [listName]: reordered } };
         });
-
-        const currentItems = Array.from(data.lists[activeList]);
-        const [removed] = currentItems.splice(startIndex, 1);
-        currentItems.splice(endIndex, 0, removed);
 
         if (useBackend) {
             pendingSave.current = true;
             clearTimeout(saveOrderTimer.current);
             saveOrderTimer.current = setTimeout(() => {
-                saveOrderToBackend(currentItems);
+                if (reorderedItemsRef.current) {
+                    saveOrderToBackend(reorderedItemsRef.current);
+                }
             }, 300);
         }
     };
 
-    // Desktop drag handlers
     const handleDesktopDragStart = (e, index) => {
         draggedRef.current = index;
         setDraggedItem(index);
@@ -1356,7 +1381,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     const handleDesktopDragOver = (e, index) => {
         e.preventDefault();
         if (draggedRef.current === null || draggedRef.current === index) return;
-        
         reorderItems(draggedRef.current, index);
         draggedRef.current = index;
     };
@@ -1366,31 +1390,21 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         setDraggedItem(null);
     };
 
-    // Mobile touch handlers - DRAG HANDLE ONLY (simple & reliable!)
     const handleDragHandleTouchStart = (e, index) => {
-        // Prevent default to stop scrolling
         e.preventDefault();
-        
-        // Start drag immediately when touching handle
         draggedRef.current = index;
         setDraggedItem(index);
         setIsDragging(true);
-        
-        // Haptic feedback
+
         if (window.navigator.vibrate) {
             window.navigator.vibrate(50);
         }
-        
-        // Store the touch identifier
+
         const touchId = e.touches[0].identifier;
-        
+
         const handleTouchMove = (moveEvent) => {
-            // Prevent scrolling while dragging
-            if (moveEvent.cancelable) {
-                moveEvent.preventDefault();
-            }
-            
-            // Find the touch that matches our identifier
+            if (moveEvent.cancelable) moveEvent.preventDefault();
+
             let touch = null;
             for (let i = 0; i < moveEvent.touches.length; i++) {
                 if (moveEvent.touches[i].identifier === touchId) {
@@ -1398,16 +1412,13 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     break;
                 }
             }
-            
             if (!touch || draggedRef.current === null) return;
-            
+
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
-            
             if (element) {
                 const itemElement = element.closest('[data-item-index]');
                 if (itemElement) {
                     const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                    
                     if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
                         reorderItems(draggedRef.current, hoverIndex);
                         draggedRef.current = hoverIndex;
@@ -1415,9 +1426,8 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 }
             }
         };
-        
+
         const handleTouchEnd = (endEvent) => {
-            // Check if our touch ended
             let touchEnded = true;
             if (endEvent.touches) {
                 for (let i = 0; i < endEvent.touches.length; i++) {
@@ -1427,26 +1437,21 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     }
                 }
             }
-            
             if (touchEnded) {
                 draggedRef.current = null;
                 setDraggedItem(null);
                 setIsDragging(false);
-                
-                // Remove listeners from document
                 document.removeEventListener('touchmove', handleTouchMove);
                 document.removeEventListener('touchend', handleTouchEnd);
                 document.removeEventListener('touchcancel', handleTouchEnd);
             }
         };
-        
-        // Add listeners to document so they work even when finger moves off the handle
+
         document.addEventListener('touchmove', handleTouchMove, { passive: false });
         document.addEventListener('touchend', handleTouchEnd, { passive: false });
         document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
     };
 
-    // Cleanup on unmount (when switching tabs)
     useEffect(() => {
         return () => {
             clearTimeout(saveOrderTimer.current);
@@ -1454,9 +1459,100 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         };
     }, []);
 
+    // Pre-compute filtered lists once (fixes issue 3: redundant .filter() calls)
+    const activeItems = useMemo(
+        () => hasLogbook ? items.filter(item => !item[toggleField]) : items,
+        [items, toggleField, hasLogbook]
+    );
+    const completedItems = useMemo(
+        () => hasLogbook ? items.filter(item => item[toggleField] && !item.is_section) : [],
+        [items, toggleField, hasLogbook]
+    );
+
+    const renderDragHandle = (index) => (
+        <div
+            draggable={true}
+            onDragStart={(e) => handleDesktopDragStart(e, index)}
+            onDragEnd={handleDesktopDragEnd}
+            className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
+            onTouchStart={(e) => handleDragHandleTouchStart(e, index)}
+        >
+            <Icons.DragHandle />
+        </div>
+    );
+
+    const renderItemRow = (item, index) => {
+        const actualIndex = hasLogbook ? items.indexOf(item) : index;
+        const isToggled = item[toggleField];
+
+        if (item.is_section && hasSections) {
+            return (
+                <div
+                    key={item.id}
+                    data-item-index={actualIndex}
+                    onDragOver={(e) => handleDesktopDragOver(e, actualIndex)}
+                    className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all ${
+                        draggedItem === actualIndex ? 'opacity-50 scale-105 shadow-xl' : ''
+                    }`}
+                >
+                    {renderDragHandle(actualIndex)}
+                    <div
+                        onClick={() => setEditingItem({ ...item })}
+                        className="flex-1 flex items-center gap-2 cursor-pointer"
+                    >
+                        <span className="text-emerald-600 text-lg">📑</span>
+                        <span className="font-bold text-emerald-700 uppercase text-sm tracking-wide">
+                            {item.text}
+                        </span>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div
+                key={item.id}
+                data-item-index={actualIndex}
+                onDragOver={(e) => handleDesktopDragOver(e, actualIndex)}
+                className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all ${
+                    draggedItem === actualIndex ? 'opacity-50 scale-105 shadow-xl' : ''
+                }`}
+            >
+                {renderDragHandle(actualIndex)}
+                <button
+                    onClick={() => toggleItem(item.id)}
+                    className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                        isToggled ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'
+                    }`}
+                >
+                    {isToggled && <Icons.Check />}
+                </button>
+                <span
+                    onClick={() => setEditingItem({ ...item })}
+                    className={`flex-1 cursor-pointer ${
+                        isToggled ? 'line-through text-gray-400' : 'text-gray-800'
+                    }`}
+                >
+                    {item.text}
+                </span>
+            </div>
+        );
+    };
+
     return (
         <div className="p-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Lists</h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+                {hasUncheckAll && (
+                    <button
+                        onClick={uncheckAll}
+                        disabled={items.length === 0}
+                        className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 disabled:bg-gray-300"
+                    >
+                        Uncheck All
+                    </button>
+                )}
+            </div>
 
             {/* List Type Selector */}
             <div className="flex overflow-x-auto gap-2 mb-4 pb-2">
@@ -1494,130 +1590,55 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                         <Icons.Plus />
                     </button>
                 </div>
-                <button
-                    onClick={() => setShowAddSection(!showAddSection)}
-                    className={`mt-3 px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
-                        showAddSection 
-                            ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                    }`}
-                >
-                    {showAddSection ? (
-                        <>
-                            <span className="text-lg">✕</span>
-                            <span>Cancel</span>
-                        </>
-                    ) : (
-                        <>
-                            <span className="text-lg">📑</span>
-                            <span>Add Section Header</span>
-                        </>
-                    )}
-                </button>
-                {showAddSection && (
-                    <div className="flex gap-2 mt-2 pt-2 border-t">
-                        <input
-                            type="text"
-                            placeholder="Section name (e.g., 'Produce', 'Dairy')"
-                            value={newSectionName}
-                            onChange={(e) => setNewSectionName(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && addSection()}
-                            className="flex-1 p-2 border rounded text-sm"
-                        />
+                {hasSections && (
+                    <>
                         <button
-                            onClick={addSection}
-                            disabled={!newSectionName.trim()}
-                            className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-300 text-sm"
+                            onClick={() => setShowAddSection(!showAddSection)}
+                            className={`mt-3 px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                                showAddSection
+                                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                            }`}
                         >
-                            Add
+                            {showAddSection ? (
+                                <>
+                                    <span className="text-lg">✕</span>
+                                    <span>Cancel</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-lg">📑</span>
+                                    <span>Add Section Header</span>
+                                </>
+                            )}
                         </button>
-                    </div>
+                        {showAddSection && (
+                            <div className="flex gap-2 mt-2 pt-2 border-t">
+                                <input
+                                    type="text"
+                                    placeholder="Section name (e.g., 'Produce', 'Dairy')"
+                                    value={newSectionName}
+                                    onChange={(e) => setNewSectionName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && addSection()}
+                                    className="flex-1 p-2 border rounded text-sm"
+                                />
+                                <button
+                                    onClick={addSection}
+                                    disabled={!newSectionName.trim()}
+                                    className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-300 text-sm"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
-            {/* Active Items (not completed) */}
+            {/* Items */}
             <div className="space-y-2">
-                {data.lists[activeList].filter(item => !item.completed).map((item, index) => {
-                    // Get the actual index in the full array for drag operations
-                    const actualIndex = data.lists[activeList].indexOf(item);
-                    return item.is_section ? (
-                        // Section Header
-                        <div
-                            key={item.id}
-                            data-item-index={actualIndex}
-                            onDragOver={(e) => handleDesktopDragOver(e, actualIndex)}
-                            className={`bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3 transition-all ${
-                                draggedItem === actualIndex ? 'opacity-50 scale-105 shadow-xl' : ''
-                            }`}
-                        >
-                            <div 
-                                draggable={true}
-                                onDragStart={(e) => handleDesktopDragStart(e, actualIndex)}
-                                onDragEnd={handleDesktopDragEnd}
-                                className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
-                                onTouchStart={(e) => handleDragHandleTouchStart(e, actualIndex)}
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                </svg>
-                            </div>
-                            <div 
-                                onClick={() => setEditingItem({ ...item })}
-                                className="flex-1 flex items-center gap-2 cursor-pointer"
-                            >
-                                <span className="text-emerald-600 text-lg">📑</span>
-                                <span className="font-bold text-emerald-700 uppercase text-sm tracking-wide">
-                                    {item.text}
-                                </span>
-                            </div>
-                        </div>
-                    ) : (
-                        // Regular Item
-                        <div
-                            key={item.id}
-                            data-item-index={actualIndex}
-                            onDragOver={(e) => handleDesktopDragOver(e, actualIndex)}
-                            className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all ${
-                                draggedItem === actualIndex ? 'opacity-50 scale-105 shadow-xl' : ''
-                            }`}
-                        >
-                            <div 
-                                draggable={true}
-                                onDragStart={(e) => handleDesktopDragStart(e, actualIndex)}
-                                onDragEnd={handleDesktopDragEnd}
-                                className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
-                                onTouchStart={(e) => handleDragHandleTouchStart(e, actualIndex)}
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                </svg>
-                            </div>
-                            <button
-                                onClick={() => toggleItem(item.id)}
-                                className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                                    item.completed
-                                        ? 'bg-emerald-500 border-emerald-500'
-                                        : 'border-gray-300'
-                                }`}
-                            >
-                                {item.completed && (
-                                    <Icons.Check />
-                                )}
-                            </button>
-                            <span
-                                onClick={() => setEditingItem({ ...item })}
-                                className={`flex-1 cursor-pointer ${
-                                    item.completed
-                                        ? 'line-through text-gray-400'
-                                        : 'text-gray-800'
-                                }`}
-                            >
-                                {item.text}
-                            </span>
-                        </div>
-                    );
-                })}
-                {data.lists[activeList].filter(item => !item.completed).length === 0 && (
+                {activeItems.map((item, index) => renderItemRow(item, index))}
+                {activeItems.length === 0 && (
                     <div className="text-center text-gray-400 py-8">
                         No items yet. Add your first item above!
                     </div>
@@ -1625,7 +1646,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
             </div>
 
             {/* Logbook Section - Completed Tasks */}
-            {data.lists[activeList].filter(item => item.completed && !item.is_section).length > 0 && (
+            {hasLogbook && completedItems.length > 0 && (
                 <div className="mt-6">
                     <button
                         onClick={() => setLogbookExpanded(!logbookExpanded)}
@@ -1636,23 +1657,18 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                             <div className="text-left">
                                 <h3 className="font-bold text-gray-800">Logbook</h3>
                                 <p className="text-sm text-gray-500">
-                                    {data.lists[activeList].filter(item => item.completed && !item.is_section).length} completed {data.lists[activeList].filter(item => item.completed && !item.is_section).length === 1 ? 'task' : 'tasks'}
+                                    {completedItems.length} completed {completedItems.length === 1 ? 'task' : 'tasks'}
                                 </p>
                             </div>
                         </div>
-                        <svg 
-                            className={`w-6 h-6 text-gray-600 transition-transform ${logbookExpanded ? 'rotate-180' : ''}`}
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        <span className={`text-gray-600 transition-transform ${logbookExpanded ? 'rotate-180' : ''}`}>
+                            <Icons.ChevronDown />
+                        </span>
                     </button>
 
                     {logbookExpanded && (
                         <div className="mt-2 space-y-2">
-                            {data.lists[activeList].filter(item => item.completed && !item.is_section).map((item) => (
+                            {completedItems.map((item) => (
                                 <div
                                     key={item.id}
                                     className="bg-gray-50 p-4 rounded-lg flex items-center gap-3"
@@ -1672,7 +1688,6 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                     )}
                 </div>
             )}
-
 
             {/* Edit Item Dialog */}
             {editingItem && (
@@ -1732,494 +1747,82 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
     );
 }
 
-function ReferenceListsView({ data, setData, showToast, useBackend, updateData }) {
-    const [activeList, setActiveList] = useState('leaving');
-    const [newItemText, setNewItemText] = useState('');
-    const [confirmDelete, setConfirmDelete] = useState(null);
-    const [draggedItem, setDraggedItem] = useState(null);
-    const [editingItem, setEditingItem] = useState(null);
-    const draggedRef = useRef(null);
-    const [isDragging, setIsDragging] = useState(false);
-    const saveOrderTimer = useRef(null);
-    const pendingSave = useRef(false);
+const TASK_LIST_TYPES = [
+    { id: 'tasks', label: 'Tasks' },
+    { id: 'projects', label: 'Projects' },
+    { id: 'thingsToBuy', label: 'Things to Buy' },
+];
 
-    const listTypes = [
-        { id: 'leaving', label: 'Leaving Checklist' },
-        { id: 'annual', label: 'Annual Jobs' },
-    ];
+const REFERENCE_LIST_TYPES = [
+    { id: 'leaving', label: 'Leaving Checklist' },
+    { id: 'annual', label: 'Annual Jobs' },
+];
 
-    const addItem = async () => {
-        if (!newItemText.trim()) return;
-        const text = newItemText;
-        const listName = activeList;
-        const tempId = generateId();
-        const nextSortOrder = data.lists[listName].length;
-        setNewItemText('');
-        await updateData(
-            async () => {
-                const newItem = { text, checked: false, sort_order: nextSortOrder };
-                if (useBackend) {
-                    await propertyAPI.addListItem(listName, newItem);
-                } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: { ...prev.lists, [listName]: [...prev.lists[listName], { ...newItem, id: generateId() }] },
-                    }));
-                }
-            },
-            () => setData(prev => ({
-                ...prev,
-                lists: {
-                    ...prev.lists,
-                    [listName]: [...prev.lists[listName], { id: tempId, text, checked: false, sort_order: nextSortOrder }],
-                },
-            })),
-            [listName]
-        );
-        showToast('Item added!');
-    };
-
-    const toggleItem = async (id) => {
-        const item = data.lists[activeList].find(i => i.id === id);
-        if (!item) return;
-        const newValue = !item.checked;
-        const listName = activeList;
-        await updateData(
-            async () => {
-                if (useBackend) {
-                    await propertyAPI.updateListItem(id, { checked: newValue });
-                } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: {
-                            ...prev.lists,
-                            [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, checked: newValue } : i),
-                        },
-                    }));
-                }
-            },
-            () => setData(prev => ({
-                ...prev,
-                lists: {
-                    ...prev.lists,
-                    [listName]: prev.lists[listName].map(i => i.id === id ? { ...i, checked: newValue } : i),
-                },
-            })),
-            { skipRefetch: true }
-        );
-    };
-
-    const deleteItem = async (id) => {
-        const listName = activeList;
-        setConfirmDelete(null);
-        await updateData(
-            async () => {
-                if (useBackend) {
-                    await propertyAPI.deleteListItem(id);
-                } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: { ...prev.lists, [listName]: prev.lists[listName].filter(item => item.id !== id) },
-                    }));
-                }
-            },
-            () => setData(prev => ({
-                ...prev,
-                lists: { ...prev.lists, [listName]: prev.lists[listName].filter(item => item.id !== id) },
-            })),
-            { affectedLists: [listName] }
-        );
-        showToast('Item deleted');
-    };
-
-    const updateItem = async () => {
-        if (!editingItem.text.trim()) return;
-        const item = { ...editingItem };
-        const listName = activeList;
-        setEditingItem(null);
-        await updateData(
-            async () => {
-                if (useBackend) {
-                    await propertyAPI.updateListItem(item.id, { text: item.text });
-                } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: { ...prev.lists, [listName]: prev.lists[listName].map(i => i.id === item.id ? item : i) },
-                    }));
-                }
-            },
-            () => setData(prev => ({
-                ...prev,
-                lists: { ...prev.lists, [listName]: prev.lists[listName].map(i => i.id === item.id ? item : i) },
-            })),
-            { skipRefetch: true }
-        );
-        showToast('Item updated');
-    };
-
-    const uncheckAll = async () => {
-        const listName = activeList;
-        await updateData(
-            async () => {
-                if (useBackend) {
-                    await propertyAPI.uncheckAllListItems(listName);
-                } else {
-                    setData(prev => ({
-                        ...prev,
-                        lists: {
-                            ...prev.lists,
-                            [listName]: prev.lists[listName].map(item => ({ ...item, checked: false })),
-                        },
-                    }));
-                }
-            },
-            () => setData(prev => ({
-                ...prev,
-                lists: {
-                    ...prev.lists,
-                    [listName]: prev.lists[listName].map(item => ({ ...item, checked: false })),
-                },
-            })),
-            { skipRefetch: true }
-        );
-        showToast('All items unchecked');
-    };
-
-    // Save all items' sort order to backend (debounced)
-    const saveOrderToBackend = async (items) => {
-        if (!useBackend) return;
-        await updateData(
-            async () => {
-                await Promise.all(
-                    items.map((item, index) =>
-                        propertyAPI.updateListItem(item.id, { sort_order: index })
-                    )
-                );
-                pendingSave.current = false;
-            },
-            null,
-            { skipRefetch: true }
-        );
-    };
-
-    const reorderItems = (startIndex, endIndex) => {
-        const listName = activeList;
-        setData(prev => {
-            const items = Array.from(prev.lists[listName]);
-            const [removed] = items.splice(startIndex, 1);
-            items.splice(endIndex, 0, removed);
-            return { ...prev, lists: { ...prev.lists, [listName]: items } };
-        });
-
-        const currentItems = Array.from(data.lists[activeList]);
-        const [removed] = currentItems.splice(startIndex, 1);
-        currentItems.splice(endIndex, 0, removed);
-
-        if (useBackend) {
-            pendingSave.current = true;
-            clearTimeout(saveOrderTimer.current);
-            saveOrderTimer.current = setTimeout(() => {
-                saveOrderToBackend(currentItems);
-            }, 300);
-        }
-    };
-
-    // Desktop drag handlers
-    const handleDesktopDragStart = (e, index) => {
-        draggedRef.current = index;
-        setDraggedItem(index);
-        if (e.dataTransfer) {
-            e.dataTransfer.effectAllowed = 'move';
-        }
-    };
-
-    const handleDesktopDragOver = (e, index) => {
-        e.preventDefault();
-        if (draggedRef.current === null || draggedRef.current === index) return;
-        
-        reorderItems(draggedRef.current, index);
-        draggedRef.current = index;
-    };
-
-    const handleDesktopDragEnd = () => {
-        draggedRef.current = null;
-        setDraggedItem(null);
-    };
-
-    // Mobile touch handlers - DRAG HANDLE ONLY (simple & reliable!)
-    const handleDragHandleTouchStart = (e, index) => {
-        // Prevent default to stop scrolling
-        e.preventDefault();
-        
-        // Start drag immediately when touching handle
-        draggedRef.current = index;
-        setDraggedItem(index);
-        setIsDragging(true);
-        
-        // Haptic feedback
-        if (window.navigator.vibrate) {
-            window.navigator.vibrate(50);
-        }
-        
-        // Store the touch identifier
-        const touchId = e.touches[0].identifier;
-        
-        const handleTouchMove = (moveEvent) => {
-            // Prevent scrolling while dragging
-            if (moveEvent.cancelable) {
-                moveEvent.preventDefault();
-            }
-            
-            // Find the touch that matches our identifier
-            let touch = null;
-            for (let i = 0; i < moveEvent.touches.length; i++) {
-                if (moveEvent.touches[i].identifier === touchId) {
-                    touch = moveEvent.touches[i];
-                    break;
-                }
-            }
-            
-            if (!touch || draggedRef.current === null) return;
-            
-            const element = document.elementFromPoint(touch.clientX, touch.clientY);
-            
-            if (element) {
-                const itemElement = element.closest('[data-item-index]');
-                if (itemElement) {
-                    const hoverIndex = parseInt(itemElement.getAttribute('data-item-index'));
-                    
-                    if (hoverIndex !== draggedRef.current && !isNaN(hoverIndex)) {
-                        reorderItems(draggedRef.current, hoverIndex);
-                        draggedRef.current = hoverIndex;
-                    }
-                }
-            }
-        };
-        
-        const handleTouchEnd = (endEvent) => {
-            // Check if our touch ended
-            let touchEnded = true;
-            if (endEvent.touches) {
-                for (let i = 0; i < endEvent.touches.length; i++) {
-                    if (endEvent.touches[i].identifier === touchId) {
-                        touchEnded = false;
-                        break;
-                    }
-                }
-            }
-            
-            if (touchEnded) {
-                draggedRef.current = null;
-                setDraggedItem(null);
-                setIsDragging(false);
-                
-                // Remove listeners from document
-                document.removeEventListener('touchmove', handleTouchMove);
-                document.removeEventListener('touchend', handleTouchEnd);
-                document.removeEventListener('touchcancel', handleTouchEnd);
-            }
-        };
-        
-        // Add listeners to document so they work even when finger moves off the handle
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd, { passive: false });
-        document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-    };
-
-    // Cleanup on unmount (when switching tabs)
-    useEffect(() => {
-        return () => {
-            clearTimeout(saveOrderTimer.current);
-            draggedRef.current = null;
-        };
-    }, []);
-
+function ListsView(props) {
     return (
-        <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Reference Lists</h2>
-                <button
-                    onClick={uncheckAll}
-                    disabled={data.lists[activeList].length === 0}
-                    className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 disabled:bg-gray-300"
-                >
-                    Uncheck All
-                </button>
-            </div>
+        <DraggableListView
+            {...props}
+            title="Lists"
+            listTypes={TASK_LIST_TYPES}
+            defaultList="tasks"
+            toggleField="completed"
+            hasSections={true}
+            hasLogbook={true}
+            hasUncheckAll={false}
+        />
+    );
+}
 
-            {/* List Type Selector */}
-            <div className="flex overflow-x-auto gap-2 mb-4 pb-2">
-                {listTypes.map(type => (
-                    <button
-                        key={type.id}
-                        onClick={() => setActiveList(type.id)}
-                        className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold transition-colors ${
-                            activeList === type.id
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-white text-gray-700 border'
-                        }`}
-                    >
-                        {type.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Add Item */}
-            <div className="bg-white p-4 rounded-lg shadow mb-4">
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        placeholder={`Add to ${listTypes.find(t => t.id === activeList)?.label}`}
-                        value={newItemText}
-                        onChange={(e) => setNewItemText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && addItem()}
-                        className="flex-1 p-2 border rounded"
-                    />
-                    <button
-                        onClick={addItem}
-                        disabled={!newItemText.trim()}
-                        className="bg-emerald-500 text-white px-4 py-2 rounded disabled:bg-gray-300"
-                    >
-                        <Icons.Plus />
-                    </button>
-                </div>
-            </div>
-
-            {/* Items - Checkboxes that stay visible */}
-            <div className="space-y-2">
-                {data.lists[activeList].map((item, index) => (
-                    <div
-                        key={item.id}
-                        data-item-index={index}
-                        onDragOver={(e) => handleDesktopDragOver(e, index)}
-                        className={`bg-white p-4 rounded-lg shadow flex items-center gap-3 transition-all ${
-                            draggedItem === index ? 'opacity-50 scale-105 shadow-xl' : ''
-                        }`}
-                    >
-                        <div 
-                            draggable={true}
-                            onDragStart={(e) => handleDesktopDragStart(e, index)}
-                            onDragEnd={handleDesktopDragEnd}
-                            className="text-gray-400 p-2 -m-2 touch-none active:bg-gray-200 rounded cursor-grab"
-                            onTouchStart={(e) => handleDragHandleTouchStart(e, index)}
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                            </svg>
-                        </div>
-                        <button
-                            onClick={() => toggleItem(item.id)}
-                            className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                                item.checked
-                                    ? 'bg-emerald-500 border-emerald-500'
-                                    : 'border-gray-300'
-                            }`}
-                        >
-                            {item.checked && (
-                                <Icons.Check />
-                            )}
-                        </button>
-                        <span
-                            onClick={() => setEditingItem({ ...item })}
-                            className="flex-1 text-gray-800 cursor-pointer"
-                        >
-                            {item.text}
-                        </span>
-                    </div>
-                ))}
-                {data.lists[activeList].length === 0 && (
-                    <div className="text-center text-gray-400 py-8">
-                        No items yet. Add your first item above!
-                    </div>
-                )}
-            </div>
-
-            {/* Edit Item Dialog */}
-            {editingItem && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-xl">Edit Item</h3>
-                            <button
-                                onClick={() => {
-                                    setConfirmDelete(editingItem.id);
-                                    setEditingItem(null);
-                                }}
-                                className="text-red-500 p-2 hover:bg-red-50 rounded"
-                            >
-                                <Icons.Trash />
-                            </button>
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Item text"
-                            value={editingItem.text}
-                            onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
-                            onKeyDown={(e) => e.key === 'Enter' && updateItem()}
-                            className="w-full p-2 border rounded mb-4"
-                            autoFocus
-                        />
-                        <div className="flex gap-2">
-                            <button
-                                onClick={updateItem}
-                                disabled={!editingItem.text.trim()}
-                                className="flex-1 bg-emerald-500 text-white py-2 rounded disabled:bg-gray-300"
-                            >
-                                Save Changes
-                            </button>
-                            <button
-                                onClick={() => setEditingItem(null)}
-                                className="flex-1 bg-gray-300 text-gray-700 py-2 rounded"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Confirm Delete Dialog */}
-            {confirmDelete && (
-                <ConfirmDialog
-                    message="Delete this item?"
-                    onConfirm={() => deleteItem(confirmDelete)}
-                    onCancel={() => setConfirmDelete(null)}
-                />
-            )}
-        </div>
+function ReferenceListsView(props) {
+    return (
+        <DraggableListView
+            {...props}
+            title="Reference Lists"
+            listTypes={REFERENCE_LIST_TYPES}
+            defaultList="leaving"
+            toggleField="checked"
+            hasSections={false}
+            hasLogbook={false}
+            hasUncheckAll={true}
+        />
     );
 }
 
 // Calendar Grid Component for visual month view
 const CalendarGrid = memo(({ bookings, startMonth, onDateClick }) => {
-    const getBookingsForDate = (date) => {
-        const dateStr = date.toISOString().split('T')[0];
-        return bookings.filter(booking => {
-            // Normalize all dates to midnight local time for accurate comparison
-            const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-            const start = new Date(booking.startDate);
-            const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-            const end = new Date(booking.endDate);
-            const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-            
-            // A booking occupies dates from startDate (inclusive) to endDate (exclusive)
-            // endDate is the checkout date, so it should be available
-            return checkDate >= startDay && checkDate < endDay;
-        });
-    };
+    // Pre-compute a lookup map: dateString -> booking[] for the visible month
+    const bookingsByDate = useMemo(() => {
+        const date = new Date(startMonth);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const map = {};
 
-    const getDayClass = (date) => {
-        const bookingsOnDate = getBookingsForDate(date);
-        if (bookingsOnDate.length === 0) return 'bg-green-100 hover:bg-green-50'; // Green for available
-        
-        // Check if all bookings are tentative or if there's at least one confirmed
+        for (let day = 1; day <= daysInMonth; day++) {
+            const checkDate = new Date(year, month, day);
+            const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            map[key] = bookings.filter(booking => {
+                const start = new Date(booking.startDate);
+                const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                const end = new Date(booking.endDate);
+                const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+                return checkDate >= startDay && checkDate < endDay;
+            });
+        }
+        return map;
+    }, [bookings, startMonth]);
+
+    const getDateKey = (date) =>
+        `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+    const getDayClass = (bookingsOnDate) => {
+        if (bookingsOnDate.length === 0) return 'bg-green-100 hover:bg-green-50';
         const hasBooked = bookingsOnDate.some(b => b.status === 'Booked');
         const hasTentative = bookingsOnDate.some(b => b.status === 'Tentative');
-        
-        if (hasBooked && hasTentative) return 'bg-gradient-to-br from-red-300 to-yellow-300'; // Mix of both
-        if (hasBooked) return 'bg-red-300'; // Red for booked
-        if (hasTentative) return 'bg-yellow-300'; // Yellow for tentative
-        return 'bg-green-100 hover:bg-green-50'; // Green for available
+        if (hasBooked && hasTentative) return 'bg-gradient-to-br from-red-300 to-yellow-300';
+        if (hasBooked) return 'bg-red-300';
+        if (hasTentative) return 'bg-yellow-300';
+        return 'bg-green-100 hover:bg-green-50';
     };
 
     const renderMonth = (monthOffset) => {
@@ -2230,30 +1833,30 @@ const CalendarGrid = memo(({ bookings, startMonth, onDateClick }) => {
         const month = date.getMonth();
         const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         
-        // Get first day of month and number of days
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
         const daysInMonth = lastDay.getDate();
-        const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday
+        const startingDayOfWeek = firstDay.getDay();
         
         const days = [];
         
-        // Add empty cells for days before month starts
         for (let i = 0; i < startingDayOfWeek; i++) {
             days.push(<div key={`empty-${i}`} className="h-10 md:h-12"></div>);
         }
         
-        // Add days of the month
+        const todayStr = new Date().toDateString();
+
         for (let day = 1; day <= daysInMonth; day++) {
             const currentDate = new Date(year, month, day);
-            const bookingsOnDate = getBookingsForDate(currentDate);
-            const isToday = new Date().toDateString() === currentDate.toDateString();
+            const key = getDateKey(currentDate);
+            const bookingsOnDate = bookingsByDate[key] || [];
+            const isToday = todayStr === currentDate.toDateString();
             
             days.push(
                 <div
                     key={day}
                     onClick={() => onDateClick && onDateClick(currentDate, bookingsOnDate)}
-                    className={`h-10 md:h-12 flex flex-col items-center justify-center text-sm cursor-pointer border border-gray-200 ${getDayClass(currentDate)} ${isToday ? 'ring-2 ring-emerald-500' : ''}`}
+                    className={`h-10 md:h-12 flex flex-col items-center justify-center text-sm cursor-pointer border border-gray-200 ${getDayClass(bookingsOnDate)} ${isToday ? 'ring-2 ring-emerald-500' : ''}`}
                 >
                     <span className={`${isToday ? 'font-bold' : ''}`}>{day}</span>
                     {bookingsOnDate.length > 0 && (
