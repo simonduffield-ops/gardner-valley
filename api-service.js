@@ -301,17 +301,22 @@ class PropertyAPI {
     async addListItem(listType, item) {
         this.invalidateListCache(listType);
         try {
+            const insertData = {
+                list_type: listType,
+                text: item.text,
+                checked: item.checked || false,
+                completed: item.completed || false,
+                is_section: item.is_section || false,
+                month: item.month || null,
+                sort_order: item.sort_order || 0,
+            };
+            if (item.description !== undefined) insertData.description = item.description;
+            if (item.labels !== undefined) insertData.labels = item.labels;
+            if (item.due_date !== undefined) insertData.due_date = item.due_date || null;
+
             const { data, error } = await window._supabaseClient
                 .from('list_items')
-                .insert({
-                    list_type: listType,
-                    text: item.text,
-                    checked: item.checked || false,
-                    completed: item.completed || false,
-                    is_section: item.is_section || false,
-                    month: item.month || null,
-                    sort_order: item.sort_order || 0
-                })
+                .insert(insertData)
                 .select()
                 .single();
 

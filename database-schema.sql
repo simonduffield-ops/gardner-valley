@@ -34,9 +34,17 @@ CREATE TABLE IF NOT EXISTS list_items (
     is_section BOOLEAN DEFAULT FALSE, -- TRUE for section headers, FALSE for regular items
     month TEXT,
     sort_order INTEGER DEFAULT 0,
+    description TEXT DEFAULT '',
+    labels JSONB DEFAULT '[]'::jsonb,
+    due_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Migration: add kanban card fields to existing list_items table
+ALTER TABLE list_items ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+ALTER TABLE list_items ADD COLUMN IF NOT EXISTS labels JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE list_items ADD COLUMN IF NOT EXISTS due_date DATE;
 
 -- Create calendar bookings table
 CREATE TABLE IF NOT EXISTS calendar_bookings (

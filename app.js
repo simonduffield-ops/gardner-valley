@@ -254,6 +254,46 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
     )),
+    Kanban: memo(() => (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+        </svg>
+    )),
+    MoreHorizontal: memo(() => (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="5" cy="12" r="1" fill="currentColor" /><circle cx="19" cy="12" r="1" fill="currentColor" />
+        </svg>
+    )),
+    Label: memo(() => (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+    )),
+    Clock: memo(() => (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    )),
+    AlignLeft: memo(() => (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h14" />
+        </svg>
+    )),
+    Archive: memo(() => (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+        </svg>
+    )),
+    ChevronLeft: memo(() => (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+    )),
+    ChevronRight: memo(() => (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+    )),
 };
 
 // Initial data structure
@@ -518,6 +558,7 @@ function PropertyManager() {
         { id: 'map', label: 'Map', icon: Icons.Map },
         { id: 'info', label: 'Info', icon: Icons.Info },
         { id: 'lists', label: 'Lists', icon: Icons.List },
+        { id: 'projects', label: 'Projects', icon: Icons.Kanban },
         { id: 'calendar', label: 'Visits', icon: Icons.Calendar },
         { id: 'documents', label: 'Docs', icon: Icons.Document },
     ], []);
@@ -584,10 +625,11 @@ function PropertyManager() {
             </header>
 
             {/* Content */}
-            <main key={activeTab} className="flex-1 overflow-y-auto pb-20" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <main key={activeTab} className={`flex-1 pb-20 ${activeTab === 'projects' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`} style={{ WebkitOverflowScrolling: 'touch' }}>
                 {activeTab === 'map' && <MapView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'info' && <InfoView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'lists' && <ListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
+                {activeTab === 'projects' && <KanbanView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'calendar' && <CalendarView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'documents' && <DocumentsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
             </main>
@@ -599,14 +641,14 @@ function PropertyManager() {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 flex flex-col items-center py-3 px-2 transition-colors ${
+                            className={`flex-1 flex flex-col items-center py-2 px-1 transition-colors ${
                                 activeTab === tab.id
                                     ? 'text-emerald-500'
                                     : 'text-gray-400'
                             }`}
                         >
                             <tab.icon />
-                            <span className="text-xs mt-1">{tab.label}</span>
+                            <span className="text-[10px] sm:text-xs mt-0.5">{tab.label}</span>
                         </button>
                     ))}
                 </div>
@@ -1751,9 +1793,920 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
     );
 }
 
+// ==================== KANBAN / PROJECTS VIEW ====================
+
+const KANBAN_LABEL_COLORS = [
+    { id: 'green', bg: 'bg-emerald-400', text: 'text-white', light: 'bg-emerald-100 text-emerald-700', name: 'Green' },
+    { id: 'yellow', bg: 'bg-yellow-400', text: 'text-white', light: 'bg-yellow-100 text-yellow-700', name: 'Yellow' },
+    { id: 'orange', bg: 'bg-orange-400', text: 'text-white', light: 'bg-orange-100 text-orange-700', name: 'Orange' },
+    { id: 'red', bg: 'bg-red-400', text: 'text-white', light: 'bg-red-100 text-red-700', name: 'Red' },
+    { id: 'purple', bg: 'bg-purple-400', text: 'text-white', light: 'bg-purple-100 text-purple-700', name: 'Purple' },
+    { id: 'blue', bg: 'bg-blue-400', text: 'text-white', light: 'bg-blue-100 text-blue-700', name: 'Blue' },
+];
+
+function KanbanView({ data, setData, showToast, useBackend, updateData }) {
+    const [openCardId, setOpenCardId] = useState(null);
+    const [addingToColumn, setAddingToColumn] = useState(null);
+    const [newCardText, setNewCardText] = useState('');
+    const [addingColumn, setAddingColumn] = useState(false);
+    const [newColumnName, setNewColumnName] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [editingColumnId, setEditingColumnId] = useState(null);
+    const [editingColumnName, setEditingColumnName] = useState('');
+    const [columnMenuId, setColumnMenuId] = useState(null);
+
+    const dragState = useRef({ type: null, sourceColIdx: null, cardIdx: null, overColIdx: null, overCardIdx: null });
+    const touchTargetRef = useRef({ col: null, card: null });
+    const [dragType, setDragType] = useState(null);
+    const [dragSourceCol, setDragSourceCol] = useState(null);
+    const [dragOverCol, setDragOverCol] = useState(null);
+    const [dragOverCard, setDragOverCard] = useState(null);
+
+    const saveOrderTimer = useRef(null);
+    const pendingSave = useRef(false);
+    const boardScrollRef = useRef(null);
+
+    const items = data.lists.projects || [];
+
+    const columns = useMemo(() => {
+        const cols = [];
+        let currentCol = null;
+        const uncategorized = [];
+
+        items.forEach(item => {
+            if (item.is_section) {
+                currentCol = { section: item, cards: [] };
+                cols.push(currentCol);
+            } else if (currentCol) {
+                currentCol.cards.push(item);
+            } else {
+                uncategorized.push(item);
+            }
+        });
+
+        if (uncategorized.length > 0 && cols.length === 0) {
+            cols.push({ section: { id: '__uncategorized__', text: 'To Do', is_section: true }, cards: uncategorized });
+        } else if (uncategorized.length > 0) {
+            cols[0].cards = [...uncategorized, ...cols[0].cards];
+        }
+
+        return cols;
+    }, [items]);
+
+    const rebuildItemsFromColumns = useCallback((newColumns) => {
+        const flat = [];
+        newColumns.forEach(col => {
+            if (col.section.id !== '__uncategorized__') {
+                flat.push(col.section);
+            }
+            col.cards.forEach(card => flat.push(card));
+        });
+        return flat;
+    }, []);
+
+    const persistOrder = useCallback((newItems) => {
+        setData(prev => ({
+            ...prev,
+            lists: { ...prev.lists, projects: newItems },
+        }));
+
+        if (useBackend) {
+            pendingSave.current = true;
+            clearTimeout(saveOrderTimer.current);
+            saveOrderTimer.current = setTimeout(async () => {
+                await updateData(
+                    async () => {
+                        await Promise.all(
+                            newItems.map((item, index) =>
+                                propertyAPI.updateListItem(item.id, { sort_order: index })
+                            )
+                        );
+                        pendingSave.current = false;
+                    },
+                    null,
+                    { skipRefetch: true }
+                );
+            }, 400);
+        }
+    }, [setData, useBackend, updateData]);
+
+    const optimisticListUpdate = useCallback((updater) => {
+        const apply = () => setData(prev => ({
+            ...prev,
+            lists: { ...prev.lists, projects: updater(prev.lists.projects) },
+        }));
+        return apply;
+    }, [setData]);
+
+    // ---- Card CRUD ----
+    const addCard = async (columnIndex) => {
+        if (!newCardText.trim()) return;
+        const text = newCardText;
+        const tempId = generateId();
+        setNewCardText('');
+        setAddingToColumn(null);
+
+        const newCols = columns.map((col, i) => {
+            if (i !== columnIndex) return col;
+            return { ...col, cards: [...col.cards, { id: tempId, text, completed: false, is_section: false, description: '', labels: [], due_date: '' }] };
+        });
+        const newItems = rebuildItemsFromColumns(newCols);
+        const nextSortOrder = newItems.length - 1;
+
+        const newItem = { text, completed: false, is_section: false, sort_order: nextSortOrder };
+        const apply = optimisticListUpdate(() => newItems);
+
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.addListItem('projects', newItem);
+                } else {
+                    apply();
+                }
+            },
+            apply,
+            ['projects']
+        );
+        showToast('Card added!');
+    };
+
+    const addColumn = async () => {
+        if (!newColumnName.trim()) return;
+        const text = newColumnName;
+        const tempId = generateId();
+        setNewColumnName('');
+        setAddingColumn(false);
+
+        const newSection = { text, is_section: true, completed: false, sort_order: items.length };
+        const apply = optimisticListUpdate(list => [...list, { ...newSection, id: tempId }]);
+
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.addListItem('projects', newSection);
+                } else {
+                    apply();
+                }
+            },
+            apply,
+            ['projects']
+        );
+        showToast('Column added!');
+    };
+
+    const deleteItem = async (id) => {
+        setConfirmDelete(null);
+        setOpenCardId(null);
+        const apply = optimisticListUpdate(list => list.filter(item => item.id !== id));
+
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.deleteListItem(id);
+                } else {
+                    apply();
+                }
+            },
+            apply,
+            { affectedLists: ['projects'] }
+        );
+        showToast('Deleted');
+    };
+
+    const updateCardField = async (cardId, field, value) => {
+        const apply = optimisticListUpdate(list =>
+            list.map(item => item.id === cardId ? { ...item, [field]: value } : item)
+        );
+
+        const backendValue = field === 'due_date' && value === '' ? null : value;
+
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.updateListItem(cardId, { [field]: backendValue });
+                } else {
+                    apply();
+                }
+            },
+            apply,
+            { skipRefetch: true }
+        );
+    };
+
+    const renameColumn = async (sectionId, newName) => {
+        setEditingColumnId(null);
+        const apply = optimisticListUpdate(list =>
+            list.map(item => item.id === sectionId ? { ...item, text: newName } : item)
+        );
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.updateListItem(sectionId, { text: newName });
+                } else {
+                    apply();
+                }
+            },
+            apply,
+            { skipRefetch: true }
+        );
+    };
+
+    const toggleCardComplete = async (cardId) => {
+        const card = items.find(i => i.id === cardId);
+        if (!card) return;
+        await updateCardField(cardId, 'completed', !card.completed);
+    };
+
+    // ---- Drag & Drop (HTML5) ----
+    const handleColumnDragStart = (e, colIdx) => {
+        dragState.current = { type: 'column', sourceColIdx: colIdx };
+        setDragType('column');
+        setDragSourceCol(colIdx);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+    };
+
+    const handleColumnDragOver = (e, colIdx) => {
+        e.preventDefault();
+        if (dragState.current.type !== 'column') return;
+        setDragOverCol(colIdx);
+    };
+
+    const handleColumnDrop = (e, colIdx) => {
+        e.preventDefault();
+        if (dragState.current.type !== 'column') return;
+        const from = dragState.current.sourceColIdx;
+        if (from === colIdx) return;
+
+        const newCols = Array.from(columns);
+        const [moved] = newCols.splice(from, 1);
+        newCols.splice(colIdx, 0, moved);
+        persistOrder(rebuildItemsFromColumns(newCols));
+    };
+
+    const handleCardDragStart = (e, colIdx, cardIdx) => {
+        e.stopPropagation();
+        dragState.current = { type: 'card', sourceColIdx: colIdx, cardIdx };
+        setDragType('card');
+        setDragSourceCol(colIdx);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+    };
+
+    const handleCardDragOver = (e, colIdx, cardIdx) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (dragState.current.type !== 'card') return;
+        setDragOverCol(colIdx);
+        setDragOverCard(cardIdx);
+    };
+
+    const handleColumnBodyDragOver = (e, colIdx) => {
+        e.preventDefault();
+        if (dragState.current.type !== 'card') return;
+        setDragOverCol(colIdx);
+        setDragOverCard(columns[colIdx]?.cards.length ?? 0);
+    };
+
+    const handleCardDrop = (e, targetColIdx, targetCardIdx) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (dragState.current.type !== 'card') return;
+
+        const { sourceColIdx, cardIdx } = dragState.current;
+        const newCols = columns.map(col => ({ ...col, cards: [...col.cards] }));
+        const [movedCard] = newCols[sourceColIdx].cards.splice(cardIdx, 1);
+        const insertIdx = targetCardIdx !== undefined ? targetCardIdx : newCols[targetColIdx].cards.length;
+        newCols[targetColIdx].cards.splice(insertIdx, 0, movedCard);
+        persistOrder(rebuildItemsFromColumns(newCols));
+    };
+
+    const handleDragEnd = () => {
+        dragState.current = { type: null };
+        setDragType(null);
+        setDragSourceCol(null);
+        setDragOverCol(null);
+        setDragOverCard(null);
+    };
+
+    // ---- Touch DnD for cards ----
+    const handleCardTouchStart = (e, colIdx, cardIdx) => {
+        const touch = e.touches[0];
+        const touchId = touch.identifier;
+        dragState.current = { type: 'card', sourceColIdx: colIdx, cardIdx, touchId, startX: touch.clientX, startY: touch.clientY, started: false };
+        touchTargetRef.current = { col: null, card: null };
+
+        const handleTouchMove = (moveEvent) => {
+            let t = null;
+            for (let i = 0; i < moveEvent.touches.length; i++) {
+                if (moveEvent.touches[i].identifier === touchId) { t = moveEvent.touches[i]; break; }
+            }
+            if (!t) return;
+
+            if (!dragState.current.started) {
+                const dx = Math.abs(t.clientX - dragState.current.startX);
+                const dy = Math.abs(t.clientY - dragState.current.startY);
+                if (dx < 8 && dy < 8) return;
+                dragState.current.started = true;
+                setDragType('card');
+                setDragSourceCol(colIdx);
+                if (window.navigator.vibrate) window.navigator.vibrate(50);
+            }
+
+            if (moveEvent.cancelable) moveEvent.preventDefault();
+
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            if (el) {
+                const colEl = el.closest('[data-kanban-col]');
+                const cardEl = el.closest('[data-kanban-card]');
+                if (colEl) {
+                    const cIdx = parseInt(colEl.getAttribute('data-kanban-col'));
+                    touchTargetRef.current.col = cIdx;
+                    setDragOverCol(cIdx);
+                    if (cardEl) {
+                        const ci = parseInt(cardEl.getAttribute('data-kanban-card'));
+                        touchTargetRef.current.card = ci;
+                        setDragOverCard(ci);
+                    } else {
+                        touchTargetRef.current.card = columns[cIdx]?.cards.length ?? 0;
+                        setDragOverCard(touchTargetRef.current.card);
+                    }
+                }
+            }
+        };
+
+        const handleTouchEnd = (endEvent) => {
+            let ended = true;
+            if (endEvent.touches) {
+                for (let i = 0; i < endEvent.touches.length; i++) {
+                    if (endEvent.touches[i].identifier === touchId) { ended = false; break; }
+                }
+            }
+            if (!ended) return;
+
+            if (dragState.current.started && touchTargetRef.current.col !== null) {
+                const { sourceColIdx: sCol, cardIdx: cIdx } = dragState.current;
+                const targetCol = touchTargetRef.current.col;
+                const targetCard = touchTargetRef.current.card;
+                const newCols = columns.map(col => ({ ...col, cards: [...col.cards] }));
+                const [movedCard] = newCols[sCol].cards.splice(cIdx, 1);
+                const insertIdx = targetCard !== undefined && targetCard !== null ? targetCard : newCols[targetCol].cards.length;
+                const adjustedIdx = (sCol === targetCol && cIdx < insertIdx) ? Math.max(0, insertIdx - 1) : insertIdx;
+                newCols[targetCol].cards.splice(adjustedIdx, 0, movedCard);
+                persistOrder(rebuildItemsFromColumns(newCols));
+            }
+
+            handleDragEnd();
+            document.removeEventListener('touchmove', handleTouchMove);
+            document.removeEventListener('touchend', handleTouchEnd);
+            document.removeEventListener('touchcancel', handleTouchEnd);
+        };
+
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+    };
+
+    useEffect(() => {
+        return () => clearTimeout(saveOrderTimer.current);
+    }, []);
+
+    // ---- Open card detail ----
+    const openCard = items.find(i => i.id === openCardId);
+
+    // ---- Render ----
+    return (
+        <div className="h-full flex flex-col">
+            {/* Board Header */}
+            <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-800">Projects</h2>
+                <button
+                    onClick={() => setAddingColumn(true)}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-colors"
+                >
+                    <Icons.Plus />
+                    <span className="hidden sm:inline">Add Column</span>
+                </button>
+            </div>
+
+            {/* Kanban Board - horizontal scroll on desktop, vertical on mobile */}
+            <div
+                ref={boardScrollRef}
+                className="flex-1 overflow-x-auto overflow-y-auto md:overflow-y-hidden px-4 pb-4 kanban-scroll"
+            >
+                <div className="flex flex-row gap-3 h-full items-start min-h-0 snap-x snap-mandatory md:snap-none pr-4">
+
+                    {columns.map((col, colIdx) => (
+                        <div
+                            key={col.section.id}
+                            data-kanban-col={colIdx}
+                            draggable={true}
+                            onDragStart={(e) => handleColumnDragStart(e, colIdx)}
+                            onDragOver={(e) => handleColumnDragOver(e, colIdx)}
+                            onDrop={(e) => {
+                                if (dragState.current.type === 'column') handleColumnDrop(e, colIdx);
+                                else if (dragState.current.type === 'card') handleCardDrop(e, colIdx);
+                            }}
+                            onDragEnd={handleDragEnd}
+                            className={`
+                                bg-gray-100 rounded-xl flex flex-col
+                                w-[80vw] min-w-[80vw] md:w-72 md:min-w-[18rem] md:max-w-[18rem]
+                                max-h-full flex-shrink-0 snap-center
+                                transition-all duration-150
+                                ${dragType === 'column' && dragOverCol === colIdx && dragSourceCol !== colIdx ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}
+                                ${dragType === 'column' && dragSourceCol === colIdx ? 'opacity-50' : ''}
+                            `}
+                        >
+                            {/* Column Header */}
+                            <div className="px-3 py-2.5 flex items-center gap-2 group">
+                                <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 p-0.5 hidden md:block">
+                                    <Icons.DragHandle />
+                                </div>
+                                {editingColumnId === col.section.id ? (
+                                    <input
+                                        type="text"
+                                        value={editingColumnName}
+                                        onChange={(e) => setEditingColumnName(e.target.value)}
+                                        onBlur={() => {
+                                            if (editingColumnName.trim()) renameColumn(col.section.id, editingColumnName.trim());
+                                            else setEditingColumnId(null);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && editingColumnName.trim()) renameColumn(col.section.id, editingColumnName.trim());
+                                            if (e.key === 'Escape') setEditingColumnId(null);
+                                        }}
+                                        className="flex-1 font-bold text-sm text-gray-700 bg-white px-2 py-1 rounded border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                        autoFocus
+                                    />
+                                ) : (
+                                    <h3
+                                        onClick={() => { setEditingColumnId(col.section.id); setEditingColumnName(col.section.text); }}
+                                        className="flex-1 font-bold text-sm text-gray-700 uppercase tracking-wide cursor-pointer hover:text-emerald-600 truncate"
+                                    >
+                                        {col.section.text}
+                                    </h3>
+                                )}
+                                <span className="text-xs text-gray-400 font-semibold bg-gray-200 px-1.5 py-0.5 rounded-full">{col.cards.length}</span>
+                                <div className="relative">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setColumnMenuId(columnMenuId === col.section.id ? null : col.section.id); }}
+                                        className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100"
+                                    >
+                                        <Icons.MoreHorizontal />
+                                    </button>
+                                    {columnMenuId === col.section.id && (
+                                        <>
+                                            <div className="fixed inset-0 z-30" onClick={() => setColumnMenuId(null)} />
+                                            <div className="absolute right-0 top-8 bg-white rounded-lg shadow-xl border z-40 py-1 w-44">
+                                                <button
+                                                    onClick={() => { setAddingToColumn(colIdx); setColumnMenuId(null); }}
+                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                                                >
+                                                    <Icons.Plus /> Add a card
+                                                </button>
+                                                <button
+                                                    onClick={() => { setEditingColumnId(col.section.id); setEditingColumnName(col.section.text); setColumnMenuId(null); }}
+                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                                                >
+                                                    <Icons.Edit /> Rename
+                                                </button>
+                                                {col.section.id !== '__uncategorized__' && (
+                                                    <button
+                                                        onClick={() => { setConfirmDelete(col.section.id); setColumnMenuId(null); }}
+                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                                    >
+                                                        <Icons.Trash /> Delete column
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Cards */}
+                            <div
+                                className="flex-1 overflow-y-auto px-2 pb-2 space-y-2 min-h-[4rem] kanban-scroll"
+                                onDragOver={(e) => handleColumnBodyDragOver(e, colIdx)}
+                                onDrop={(e) => { if (dragState.current.type === 'card') handleCardDrop(e, colIdx); }}
+                            >
+                                {col.cards.map((card, cardIdx) => (
+                                    <div
+                                        key={card.id}
+                                        data-kanban-card={cardIdx}
+                                        draggable={true}
+                                        onDragStart={(e) => handleCardDragStart(e, colIdx, cardIdx)}
+                                        onDragOver={(e) => handleCardDragOver(e, colIdx, cardIdx)}
+                                        onDrop={(e) => handleCardDrop(e, colIdx, cardIdx)}
+                                        onDragEnd={handleDragEnd}
+                                        onTouchStart={(e) => {
+                                            const handle = e.target.closest('[data-drag-handle]');
+                                            if (handle) handleCardTouchStart(e, colIdx, cardIdx);
+                                        }}
+                                        onClick={() => setOpenCardId(card.id)}
+                                        className={`
+                                            bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-pointer
+                                            hover:shadow-md hover:border-gray-300 transition-all group/card
+                                            ${card.completed ? 'opacity-60' : ''}
+                                            ${dragType === 'card' && dragOverCol === colIdx && dragOverCard === cardIdx ? 'border-t-2 border-t-emerald-400' : ''}
+                                            ${dragType === 'card' && dragSourceCol === colIdx && dragState.current.cardIdx === cardIdx ? 'opacity-30 scale-95' : ''}
+                                        `}
+                                    >
+                                        {/* Labels */}
+                                        {card.labels && card.labels.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mb-2">
+                                                {card.labels.map(labelId => {
+                                                    const lbl = KANBAN_LABEL_COLORS.find(l => l.id === labelId);
+                                                    return lbl ? <span key={labelId} className={`${lbl.bg} h-2 w-10 rounded-full inline-block`} /> : null;
+                                                })}
+                                            </div>
+                                        )}
+                                        <div className="flex items-start gap-2">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); toggleCardComplete(card.id); }}
+                                                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                                                    card.completed ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'
+                                                }`}
+                                            >
+                                                {card.completed && <Icons.Check />}
+                                            </button>
+                                            <span className={`flex-1 text-sm leading-snug ${card.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                                {card.text}
+                                            </span>
+                                            <div
+                                                data-drag-handle
+                                                className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing p-0.5 touch-none opacity-0 group-hover/card:opacity-100 md:opacity-60 transition-opacity"
+                                            >
+                                                <Icons.DragHandle />
+                                            </div>
+                                        </div>
+                                        {/* Card badges */}
+                                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                            {card.due_date && (
+                                                <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
+                                                    new Date(card.due_date) < new Date() && !card.completed ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                    <Icons.Clock />
+                                                    {new Date(card.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                </span>
+                                            )}
+                                            {card.description && (
+                                                <span className="flex items-center gap-1 text-xs text-gray-400">
+                                                    <Icons.AlignLeft />
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Drop zone indicator for empty columns or bottom */}
+                                {dragType === 'card' && dragOverCol === colIdx && col.cards.length === 0 && (
+                                    <div className="h-16 border-2 border-dashed border-emerald-300 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                        <span className="text-emerald-400 text-xs font-medium">Drop here</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Add card button / form */}
+                            {addingToColumn === colIdx ? (
+                                <div className="px-2 pb-2">
+                                    <textarea
+                                        value={newCardText}
+                                        onChange={(e) => setNewCardText(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addCard(colIdx); } if (e.key === 'Escape') setAddingToColumn(null); }}
+                                        placeholder="Enter a title for this card..."
+                                        className="w-full p-2 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                        rows={2}
+                                        autoFocus
+                                    />
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <button onClick={() => addCard(colIdx)} disabled={!newCardText.trim()} className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold disabled:bg-gray-300 hover:bg-emerald-600">
+                                            Add card
+                                        </button>
+                                        <button onClick={() => { setAddingToColumn(null); setNewCardText(''); }} className="text-gray-500 hover:text-gray-700 p-1">
+                                            <Icons.X />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setAddingToColumn(colIdx)}
+                                    className="mx-2 mb-2 px-2 py-1.5 text-gray-500 hover:bg-gray-200 rounded-lg text-sm flex items-center gap-1 transition-colors"
+                                >
+                                    <Icons.Plus />
+                                    <span>Add a card</span>
+                                </button>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Add column */}
+                    {addingColumn ? (
+                        <div className="bg-gray-100 rounded-xl p-3 w-[80vw] min-w-[80vw] md:w-72 md:min-w-[18rem] flex-shrink-0 snap-center">
+                            <input
+                                type="text"
+                                value={newColumnName}
+                                onChange={(e) => setNewColumnName(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') addColumn(); if (e.key === 'Escape') setAddingColumn(false); }}
+                                placeholder="Enter column title..."
+                                className="w-full p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 mb-2"
+                                autoFocus
+                            />
+                            <div className="flex items-center gap-2">
+                                <button onClick={addColumn} disabled={!newColumnName.trim()} className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold disabled:bg-gray-300">Add column</button>
+                                <button onClick={() => { setAddingColumn(false); setNewColumnName(''); }} className="text-gray-500 hover:text-gray-700 p-1"><Icons.X /></button>
+                            </div>
+                        </div>
+                    ) : columns.length > 0 ? (
+                        <button
+                            onClick={() => setAddingColumn(true)}
+                            className="bg-white bg-opacity-80 hover:bg-opacity-100 border-2 border-dashed border-gray-300 hover:border-emerald-400 rounded-xl p-4 w-[80vw] min-w-[80vw] md:w-72 md:min-w-[18rem] flex-shrink-0 snap-center text-gray-500 hover:text-emerald-600 font-semibold text-sm flex items-center justify-center gap-1 transition-all"
+                        >
+                            <Icons.Plus /> Add another column
+                        </button>
+                    ) : null}
+                </div>
+            </div>
+
+            {/* Card Detail Modal - Trello-style */}
+            {openCard && (
+                <KanbanCardModal
+                    card={openCard}
+                    columnName={columns.find(c => c.cards.some(cd => cd.id === openCard.id))?.section.text || ''}
+                    onClose={() => setOpenCardId(null)}
+                    onUpdateField={updateCardField}
+                    onToggleComplete={toggleCardComplete}
+                    onDelete={(id) => setConfirmDelete(id)}
+                    showToast={showToast}
+                />
+            )}
+
+            {/* Confirm Delete */}
+            {confirmDelete && (
+                <ConfirmDialog
+                    message="Delete this item? This cannot be undone."
+                    onConfirm={() => deleteItem(confirmDelete)}
+                    onCancel={() => setConfirmDelete(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+// Trello-style card detail modal
+function KanbanCardModal({ card, columnName, onClose, onUpdateField, onToggleComplete, onDelete, showToast }) {
+    const [editingTitle, setEditingTitle] = useState(false);
+    const [titleText, setTitleText] = useState(card.text);
+    const [descText, setDescText] = useState(card.description || '');
+    const [editingDesc, setEditingDesc] = useState(false);
+    const [showLabels, setShowLabels] = useState(false);
+    const [showDueDate, setShowDueDate] = useState(false);
+    const descRef = useRef(null);
+
+    useEffect(() => {
+        setTitleText(card.text);
+        setDescText(card.description || '');
+    }, [card.id, card.text, card.description]);
+
+    const saveTitle = () => {
+        if (titleText.trim() && titleText !== card.text) {
+            onUpdateField(card.id, 'text', titleText.trim());
+        }
+        setEditingTitle(false);
+    };
+
+    const saveDescription = () => {
+        if (descText !== (card.description || '')) {
+            onUpdateField(card.id, 'description', descText);
+            showToast('Description saved');
+        }
+        setEditingDesc(false);
+    };
+
+    const toggleLabel = (labelId) => {
+        const currentLabels = card.labels || [];
+        const newLabels = currentLabels.includes(labelId)
+            ? currentLabels.filter(l => l !== labelId)
+            : [...currentLabels, labelId];
+        onUpdateField(card.id, 'labels', newLabels);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-start justify-center overflow-y-auto" onClick={onClose}>
+            <div
+                className="bg-gray-50 rounded-xl shadow-2xl w-full max-w-2xl my-8 mx-4 md:my-16 relative"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Close button */}
+                <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 z-10">
+                    <Icons.X />
+                </button>
+
+                {/* Card cover labels bar */}
+                {card.labels && card.labels.length > 0 && (
+                    <div className="flex gap-1 p-4 pb-0">
+                        {card.labels.map(labelId => {
+                            const lbl = KANBAN_LABEL_COLORS.find(l => l.id === labelId);
+                            return lbl ? <span key={labelId} className={`${lbl.bg} h-3 flex-1 rounded-t-lg max-w-[4rem]`} /> : null;
+                        })}
+                    </div>
+                )}
+
+                <div className="p-6">
+                    {/* Title */}
+                    <div className="flex items-start gap-3 mb-1">
+                        <button
+                            onClick={() => onToggleComplete(card.id)}
+                            className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 transition-colors ${
+                                card.completed ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'
+                            }`}
+                        >
+                            {card.completed && <Icons.Check />}
+                        </button>
+                        {editingTitle ? (
+                            <textarea
+                                value={titleText}
+                                onChange={(e) => setTitleText(e.target.value)}
+                                onBlur={saveTitle}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveTitle(); } if (e.key === 'Escape') { setTitleText(card.text); setEditingTitle(false); } }}
+                                className="flex-1 text-xl font-bold text-gray-800 bg-white p-2 rounded border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
+                                rows={1}
+                                autoFocus
+                            />
+                        ) : (
+                            <h2
+                                onClick={() => setEditingTitle(true)}
+                                className={`flex-1 text-xl font-bold cursor-pointer hover:bg-gray-100 rounded px-2 py-1 -mx-2 -my-1 ${card.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}
+                            >
+                                {card.text}
+                            </h2>
+                        )}
+                    </div>
+                    <p className="text-xs text-gray-400 ml-9 mb-6">in column <span className="font-semibold text-gray-500">{columnName}</span></p>
+
+                    <div className="flex flex-col md:flex-row gap-6">
+                        {/* Main content */}
+                        <div className="flex-1 space-y-6 min-w-0">
+                            {/* Labels display */}
+                            {card.labels && card.labels.length > 0 && (
+                                <div>
+                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Labels</h4>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {card.labels.map(labelId => {
+                                            const lbl = KANBAN_LABEL_COLORS.find(l => l.id === labelId);
+                                            return lbl ? (
+                                                <span key={labelId} className={`${lbl.bg} ${lbl.text} text-xs font-semibold px-3 py-1 rounded cursor-pointer hover:opacity-80`} onClick={() => setShowLabels(true)}>
+                                                    {lbl.name}
+                                                </span>
+                                            ) : null;
+                                        })}
+                                        <button onClick={() => setShowLabels(true)} className="text-gray-400 hover:bg-gray-200 rounded px-2 py-1 text-xs">+</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Due date display */}
+                            {card.due_date && (
+                                <div>
+                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Due date</h4>
+                                    <button
+                                        onClick={() => setShowDueDate(true)}
+                                        className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded ${
+                                            new Date(card.due_date) < new Date() && !card.completed
+                                                ? 'bg-red-100 text-red-700'
+                                                : card.completed
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : 'bg-gray-200 text-gray-700'
+                                        }`}
+                                    >
+                                        <Icons.Clock />
+                                        {new Date(card.due_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                        {card.completed && <span className="bg-emerald-500 text-white text-xs px-1.5 py-0.5 rounded ml-1">Complete</span>}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Description */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Icons.AlignLeft />
+                                    <h4 className="text-sm font-bold text-gray-700">Description</h4>
+                                    {!editingDesc && card.description && (
+                                        <button onClick={() => setEditingDesc(true)} className="text-xs text-gray-400 hover:text-gray-600 bg-gray-200 hover:bg-gray-300 px-2 py-0.5 rounded ml-auto">
+                                            Edit
+                                        </button>
+                                    )}
+                                </div>
+                                {editingDesc ? (
+                                    <div>
+                                        <textarea
+                                            ref={descRef}
+                                            value={descText}
+                                            onChange={(e) => setDescText(e.target.value)}
+                                            className="w-full p-3 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[120px]"
+                                            placeholder="Add a more detailed description..."
+                                            autoFocus
+                                        />
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <button onClick={saveDescription} className="bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-emerald-600">Save</button>
+                                            <button onClick={() => { setDescText(card.description || ''); setEditingDesc(false); }} className="text-gray-500 hover:text-gray-700 px-3 py-1.5 text-sm">Cancel</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div
+                                        onClick={() => setEditingDesc(true)}
+                                        className={`p-3 rounded-lg text-sm cursor-pointer min-h-[80px] ${
+                                            card.description ? 'text-gray-700 bg-white border hover:bg-gray-50 whitespace-pre-wrap' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                        }`}
+                                    >
+                                        {card.description || 'Add a more detailed description...'}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Sidebar actions */}
+                        <div className="md:w-44 space-y-2 flex-shrink-0">
+                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 hidden md:block">Add to card</h4>
+
+                            <button
+                                onClick={() => setShowLabels(!showLabels)}
+                                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium py-2 px-3 rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                                <Icons.Label /> Labels
+                            </button>
+
+                            <button
+                                onClick={() => setShowDueDate(!showDueDate)}
+                                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium py-2 px-3 rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                                <Icons.Clock /> Due date
+                            </button>
+
+                            <hr className="my-3 border-gray-300" />
+
+                            <button
+                                onClick={() => onDelete(card.id)}
+                                className="w-full bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-3 rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                                <Icons.Trash /> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Labels picker popover */}
+                {showLabels && (
+                    <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-2xl border p-4 w-72 z-50">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-sm text-gray-700">Labels</h4>
+                            <button onClick={() => setShowLabels(false)} className="text-gray-400 hover:text-gray-600"><Icons.X /></button>
+                        </div>
+                        <div className="space-y-1.5">
+                            {KANBAN_LABEL_COLORS.map(lbl => (
+                                <button
+                                    key={lbl.id}
+                                    onClick={() => toggleLabel(lbl.id)}
+                                    className={`w-full flex items-center gap-2 p-2 rounded-lg hover:opacity-90 transition-colors ${lbl.bg} ${lbl.text}`}
+                                >
+                                    <span className="flex-1 text-sm font-semibold text-left">{lbl.name}</span>
+                                    {(card.labels || []).includes(lbl.id) && <Icons.Check />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Due date picker popover */}
+                {showDueDate && (
+                    <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-2xl border p-4 w-72 z-50">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-sm text-gray-700">Due date</h4>
+                            <button onClick={() => setShowDueDate(false)} className="text-gray-400 hover:text-gray-600"><Icons.X /></button>
+                        </div>
+                        <input
+                            type="date"
+                            value={card.due_date || ''}
+                            onChange={(e) => { onUpdateField(card.id, 'due_date', e.target.value); }}
+                            className="w-full p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 mb-3"
+                        />
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowDueDate(false)} className="flex-1 bg-emerald-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-emerald-600">Done</button>
+                            {card.due_date && (
+                                <button onClick={() => { onUpdateField(card.id, 'due_date', ''); setShowDueDate(false); }} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300">
+                                    Remove
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 const ALL_LIST_TYPES = [
     { id: 'tasks', label: 'Tasks' },
-    { id: 'projects', label: 'Projects' },
     { id: 'thingsToBuy', label: 'Things to Buy' },
     { id: 'leaving', label: 'Leaving Checklist', toggleField: 'checked', hasSections: false, hasLogbook: false, hasUncheckAll: true },
     { id: 'annual', label: 'Annual Jobs', toggleField: 'checked', hasSections: false, hasLogbook: false, hasUncheckAll: true },
