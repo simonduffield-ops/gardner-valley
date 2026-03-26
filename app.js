@@ -1268,7 +1268,8 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
         const tempId = generateId();
         setNewItemText('');
 
-        const newItem = { text, [toggleField]: false, is_section: false, sort_order: 0 };
+        const minOrder = items.length > 0 ? Math.min(...items.map(i => i.sort_order ?? 0)) : 0;
+        const newItem = { text, [toggleField]: false, is_section: false, sort_order: minOrder - 1 };
         const apply = optimisticListUpdate(listName, list => [{ ...newItem, id: tempId }, ...list]);
 
         await updateData(
