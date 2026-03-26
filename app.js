@@ -2059,7 +2059,6 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
 
     // ---- Drag & Drop (HTML5) ----
     const handleColumnDragStart = (e, colIdx) => {
-        if (allColumns[colIdx]?.section.id === DONE_COL_ID) { e.preventDefault(); return; }
         dragState.current = { type: 'column', sourceColIdx: colIdx };
         setDragType('column');
         setDragSourceCol(colIdx);
@@ -2078,8 +2077,6 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
         if (dragState.current.type !== 'column') return;
         const from = dragState.current.sourceColIdx;
         if (from === colIdx) return;
-        if (allColumns[from]?.section.id === DONE_COL_ID) return;
-        if (allColumns[colIdx]?.section.id === DONE_COL_ID) return;
 
         const newCols = Array.from(columns);
         const [moved] = newCols.splice(from, 1);
