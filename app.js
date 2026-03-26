@@ -518,7 +518,6 @@ function PropertyManager() {
         { id: 'map', label: 'Map', icon: Icons.Map },
         { id: 'info', label: 'Info', icon: Icons.Info },
         { id: 'lists', label: 'Lists', icon: Icons.List },
-        { id: 'reference', label: 'Guides', icon: Icons.ClipboardList },
         { id: 'calendar', label: 'Visits', icon: Icons.Calendar },
         { id: 'documents', label: 'Docs', icon: Icons.Document },
     ], []);
@@ -589,7 +588,6 @@ function PropertyManager() {
                 {activeTab === 'map' && <MapView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'info' && <InfoView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'lists' && <ListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
-                {activeTab === 'reference' && <ReferenceListsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'calendar' && <CalendarView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
                 {activeTab === 'documents' && <DocumentsView data={data} setData={setData} showToast={showToast} useBackend={useBackend} updateData={updateData} />}
             </main>
@@ -1157,14 +1155,14 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
     );
 }
 
-// Shared draggable list component used by both ListsView and ReferenceListsView.
+// Draggable list component supporting per-list-type behavior overrides.
 //
 // Config props:
 //   toggleField   – 'completed' or 'checked' (which boolean field to toggle)
 //   hasSections   – whether section headers are supported
 //   hasLogbook    – whether completed items collapse into a logbook
 //   hasUncheckAll – whether an "Uncheck All" button is shown
-function DraggableListView({ data, setData, showToast, useBackend, updateData, title, listTypes, defaultList, toggleField, hasSections, hasLogbook, hasUncheckAll }) {
+function DraggableListView({ data, setData, showToast, useBackend, updateData, title, listTypes, defaultList, toggleField: defaultToggleField, hasSections: defaultHasSections, hasLogbook: defaultHasLogbook, hasUncheckAll: defaultHasUncheckAll }) {
     const [activeList, setActiveList] = useState(defaultList);
     const [newItemText, setNewItemText] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
@@ -1173,6 +1171,12 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
     const [newSectionName, setNewSectionName] = useState('');
     const [editingItem, setEditingItem] = useState(null);
     const [logbookExpanded, setLogbookExpanded] = useState(false);
+
+    const activeType = listTypes.find(t => t.id === activeList) || {};
+    const toggleField = activeType.toggleField ?? defaultToggleField;
+    const hasSections = activeType.hasSections ?? defaultHasSections;
+    const hasLogbook = activeType.hasLogbook ?? defaultHasLogbook;
+    const hasUncheckAll = activeType.hasUncheckAll ?? defaultHasUncheckAll;
     const draggedRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
     const saveOrderTimer = useRef(null);
@@ -1747,15 +1751,12 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
     );
 }
 
-const TASK_LIST_TYPES = [
+const ALL_LIST_TYPES = [
     { id: 'tasks', label: 'Tasks' },
     { id: 'projects', label: 'Projects' },
     { id: 'thingsToBuy', label: 'Things to Buy' },
-];
-
-const REFERENCE_LIST_TYPES = [
-    { id: 'leaving', label: 'Leaving Checklist' },
-    { id: 'annual', label: 'Annual Jobs' },
+    { id: 'leaving', label: 'Leaving Checklist', toggleField: 'checked', hasSections: false, hasLogbook: false, hasUncheckAll: true },
+    { id: 'annual', label: 'Annual Jobs', toggleField: 'checked', hasSections: false, hasLogbook: false, hasUncheckAll: true },
 ];
 
 function ListsView(props) {
@@ -1763,27 +1764,12 @@ function ListsView(props) {
         <DraggableListView
             {...props}
             title="Lists"
-            listTypes={TASK_LIST_TYPES}
+            listTypes={ALL_LIST_TYPES}
             defaultList="tasks"
             toggleField="completed"
             hasSections={true}
             hasLogbook={true}
             hasUncheckAll={false}
-        />
-    );
-}
-
-function ReferenceListsView(props) {
-    return (
-        <DraggableListView
-            {...props}
-            title="Reference Lists"
-            listTypes={REFERENCE_LIST_TYPES}
-            defaultList="leaving"
-            toggleField="checked"
-            hasSections={false}
-            hasLogbook={false}
-            hasUncheckAll={true}
         />
     );
 }
