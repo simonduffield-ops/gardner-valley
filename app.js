@@ -328,9 +328,12 @@ function PropertyManager() {
     // On iOS Safari, WebSocket connections are dropped when the app is backgrounded,
     // so we reconnect and do a fresh fetch whenever the page becomes visible again.
     //
-    // syncingRef is set synchronously in updateData so the Realtime handler
-    // skips echoes of our own writes without waiting for a React state cycle.
-    const syncingRef = React.useRef(false);
+    // Monotonic counter: incremented at the START of every mutation in updateData.
+    // Realtime-triggered refetches compare their snapshot of the counter to the
+    // current value — if it has changed, a newer mutation is in flight and the
+    // stale refetch is discarded.  This eliminates the race where a realtime echo
+    // of our own write (or a slow refetch) overwrites an optimistic update.
+    const mutationEpochRef = React.useRef(0);
 
     useEffect(() => {
         if (!useBackend) return;
@@ -341,15 +344,18 @@ function PropertyManager() {
         const scheduleReload = () => {
             clearTimeout(reloadTimeout);
             reloadTimeout = setTimeout(async () => {
-                if (syncingRef.current) return; // our own write, not a remote change
+                const epochAtStart = mutationEpochRef.current;
                 try {
                     propertyAPI.clearCache();
                     const backendData = await propertyAPI.getAllData();
-                    setData(backendData);
+                    // Only apply if no mutation started while we were fetching
+                    if (mutationEpochRef.current === epochAtStart) {
+                        setData(backendData);
+                    }
                 } catch (e) {
                     console.error('Realtime reload failed:', e);
                 }
-            }, 300);
+            }, 500);
         };
 
         const connect = () => {
@@ -359,8 +365,6 @@ function PropertyManager() {
 
         connect();
 
-        // iOS kills WebSocket connections when the app is backgrounded.
-        // Re-subscribe and immediately fetch fresh data when the app comes back.
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 connect();
@@ -440,34 +444,35 @@ function PropertyManager() {
         setShowMapChoice(false);
     };
 
-    // Helper function to update data with backend sync.
-    // 1. Optimistic update applied immediately — zero visible delay.
-    // 2. DB write awaited.
-    // 3. After a short delay (gives Postgres time to commit and replicate),
-    //    fetch fresh data for just the affected lists and update state.
-    //    This replaces temp IDs with real DB IDs and confirms the write.
-    // 4. syncingRef stays true for the whole duration (write + delay + fetch)
-    //    so Realtime echoes of our own write are ignored throughout.
-    // 5. On error, full DB restore + error toast.
+    // Mutation flow:
+    // 1. Bump mutationEpochRef so any in-flight realtime refetch is discarded.
+    // 2. Apply optimistic update to local state immediately.
+    // 3. Fire the backend write.
+    // 4. After a brief delay, refetch the affected data — but ONLY apply it
+    //    if no newer mutation has started (epoch check).
+    // 5. On error, restore from DB.
     const updateData = useCallback(async (updateFn, optimisticUpdate, affectedLists = null) => {
-        if (useBackend) {
-            syncingRef.current = true;
-            if (optimisticUpdate) optimisticUpdate();
-        }
+        const epoch = ++mutationEpochRef.current;
+        if (optimisticUpdate) optimisticUpdate();
+
         try {
             await updateFn();
             if (useBackend) {
-                // Brief pause so Postgres has time to commit before we read back.
                 await new Promise(r => setTimeout(r, 400));
+                // Only apply the refetch if this is still the latest mutation
+                if (mutationEpochRef.current !== epoch) return;
+
+                propertyAPI.clearCache();
                 if (affectedLists && affectedLists.length > 0) {
                     const updatedLists = {};
                     await Promise.all(affectedLists.map(async (listName) => {
                         updatedLists[listName] = await propertyAPI.getListItems(listName);
                     }));
+                    if (mutationEpochRef.current !== epoch) return;
                     setData(prev => ({ ...prev, lists: { ...prev.lists, ...updatedLists } }));
                 } else {
-                    propertyAPI.clearCache();
                     const backendData = await propertyAPI.getAllData();
+                    if (mutationEpochRef.current !== epoch) return;
                     setData(backendData);
                 }
             }
@@ -482,10 +487,6 @@ function PropertyManager() {
                 } catch (e) {
                     console.error('Failed to restore state after error:', e);
                 }
-            }
-        } finally {
-            if (useBackend) {
-                syncingRef.current = false;
             }
         }
     }, [useBackend, showToast]);
@@ -1156,10 +1157,11 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const text = newItemText;
         const listName = activeList;
         const tempId = generateId();
+        const nextSortOrder = data.lists[listName].length;
         setNewItemText('');
         await updateData(
             async () => {
-                const newItem = { text, completed: false, is_section: false };
+                const newItem = { text, completed: false, is_section: false, sort_order: nextSortOrder };
                 if (useBackend) {
                     await propertyAPI.addListItem(listName, newItem);
                 } else {
@@ -1173,7 +1175,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 ...prev,
                 lists: {
                     ...prev.lists,
-                    [listName]: [...prev.lists[listName], { id: tempId, text, completed: false, is_section: false }],
+                    [listName]: [...prev.lists[listName], { id: tempId, text, completed: false, is_section: false, sort_order: nextSortOrder }],
                 },
             })),
             [listName]
@@ -1186,11 +1188,12 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
         const text = newSectionName;
         const listName = activeList;
         const tempId = generateId();
+        const nextSortOrder = data.lists[listName].length;
         setNewSectionName('');
         setShowAddSection(false);
         await updateData(
             async () => {
-                const newSection = { text, is_section: true, completed: false };
+                const newSection = { text, is_section: true, completed: false, sort_order: nextSortOrder };
                 if (useBackend) {
                     await propertyAPI.addListItem(listName, newSection);
                 } else {
@@ -1204,7 +1207,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
                 ...prev,
                 lists: {
                     ...prev.lists,
-                    [listName]: [...prev.lists[listName], { id: tempId, text, is_section: true, completed: false }],
+                    [listName]: [...prev.lists[listName], { id: tempId, text, is_section: true, completed: false, sort_order: nextSortOrder }],
                 },
             })),
             [listName]
@@ -1214,6 +1217,7 @@ function ListsView({ data, setData, showToast, useBackend, updateData }) {
 
     const toggleItem = async (id) => {
         const item = data.lists[activeList].find(i => i.id === id);
+        if (!item) return;
         const newValue = !item.completed;
         const listName = activeList;
         await updateData(
@@ -1737,10 +1741,11 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         const text = newItemText;
         const listName = activeList;
         const tempId = generateId();
+        const nextSortOrder = data.lists[listName].length;
         setNewItemText('');
         await updateData(
             async () => {
-                const newItem = { text, checked: false };
+                const newItem = { text, checked: false, sort_order: nextSortOrder };
                 if (useBackend) {
                     await propertyAPI.addListItem(listName, newItem);
                 } else {
@@ -1754,7 +1759,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
                 ...prev,
                 lists: {
                     ...prev.lists,
-                    [listName]: [...prev.lists[listName], { id: tempId, text, checked: false }],
+                    [listName]: [...prev.lists[listName], { id: tempId, text, checked: false, sort_order: nextSortOrder }],
                 },
             })),
             [listName]
@@ -1764,6 +1769,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
 
     const toggleItem = async (id) => {
         const item = data.lists[activeList].find(i => i.id === id);
+        if (!item) return;
         const newValue = !item.checked;
         const listName = activeList;
         await updateData(
@@ -1844,8 +1850,7 @@ function ReferenceListsView({ data, setData, showToast, useBackend, updateData }
         await updateData(
             async () => {
                 if (useBackend) {
-                    const itemIds = data.lists[listName].map(i => i.id);
-                    await Promise.all(itemIds.map(id => propertyAPI.updateListItem(id, { checked: false })));
+                    await propertyAPI.uncheckAllListItems(listName);
                 } else {
                     setData(prev => ({
                         ...prev,

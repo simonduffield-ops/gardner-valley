@@ -307,6 +307,22 @@ class PropertyAPI {
         }
     }
 
+    async uncheckAllListItems(listType) {
+        try {
+            const { data, error } = await window._supabaseClient
+                .from('list_items')
+                .update({ checked: false })
+                .eq('list_type', listType)
+                .eq('checked', true)
+                .select();
+
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            this.handleError(error, 'uncheckAllListItems');
+        }
+    }
+
     async deleteListItem(id) {
         try {
             const { error } = await window._supabaseClient
