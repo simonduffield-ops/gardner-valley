@@ -1243,11 +1243,10 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
         const text = newItemText;
         const listName = activeList;
         const tempId = generateId();
-        const nextSortOrder = items.length;
         setNewItemText('');
 
-        const newItem = { text, [toggleField]: false, is_section: false, sort_order: nextSortOrder };
-        const apply = optimisticListUpdate(listName, list => [...list, { ...newItem, id: tempId }]);
+        const newItem = { text, [toggleField]: false, is_section: false, sort_order: 0 };
+        const apply = optimisticListUpdate(listName, list => [{ ...newItem, id: tempId }, ...list]);
 
         await updateData(
             async () => {
