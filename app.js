@@ -998,6 +998,8 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
     const [showAddContact, setShowAddContact] = useState(false);
     const [newContact, setNewContact] = useState({ category: 'Utilities', name: '', value: '' });
     const [editingId, setEditingId] = useState(null);
+    const [editName, setEditName] = useState('');
+    const [editValue, setEditValue] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
 
     const addContact = async () => {
@@ -1027,17 +1029,37 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
         showToast('Contact deleted');
     };
 
-    const updateContact = async (id, field, value) => {
+    const saveContact = async (id) => {
+        const contact = data.contacts.find(c => c.id === id);
+        if (!contact) return;
+        const updates = {};
+        if (editName !== contact.name) updates.name = editName;
+        if (editValue !== contact.value) updates.value = editValue;
+        if (Object.keys(updates).length === 0) return;
+
+        setData(prev => ({
+            ...prev,
+            contacts: prev.contacts.map(c => c.id === id ? { ...c, ...updates } : c),
+        }));
+
         await updateData(async () => {
             if (useBackend) {
-                await propertyAPI.updateContact(id, { [field]: value });
-            } else {
-                setData(prev => ({
-                    ...prev,
-                    contacts: prev.contacts.map(c => c.id === id ? { ...c, [field]: value } : c),
-                }));
+                await propertyAPI.updateContact(id, updates);
             }
-        });
+        }, null, { skipRefetch: true });
+    };
+
+    const startEditing = (contact) => {
+        setEditingId(contact.id);
+        setEditName(contact.name);
+        setEditValue(contact.value);
+    };
+
+    const finishEditing = async () => {
+        if (editingId) {
+            await saveContact(editingId);
+        }
+        setEditingId(null);
     };
 
     const groupedContacts = data.contacts.reduce((acc, contact) => {
@@ -1121,18 +1143,19 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
                                             </div>
                                             <input
                                                 type="text"
-                                                value={contact.name}
-                                                onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
+                                                value={editName}
+                                                onChange={(e) => setEditName(e.target.value)}
                                                 className="w-full p-2 border rounded"
+                                                autoFocus
                                             />
                                             <input
                                                 type="text"
-                                                value={contact.value}
-                                                onChange={(e) => updateContact(contact.id, 'value', e.target.value)}
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
                                                 className="w-full p-2 border rounded"
                                             />
                                             <button
-                                                onClick={() => setEditingId(null)}
+                                                onClick={finishEditing}
                                                 className="w-full bg-emerald-500 text-white py-2 rounded font-semibold"
                                             >
                                                 Done
@@ -1170,7 +1193,7 @@ function InfoView({ data, setData, showToast, useBackend, updateData }) {
                                                     </div>
                                                 </div>
                                                 <button
-                                                    onClick={() => setEditingId(contact.id)}
+                                                    onClick={() => startEditing(contact)}
                                                     className="text-blue-500 p-1"
                                                 >
                                                     <Icons.Edit />
