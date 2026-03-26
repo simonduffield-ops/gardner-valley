@@ -1814,6 +1814,8 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
     const [editingColumnId, setEditingColumnId] = useState(null);
     const [editingColumnName, setEditingColumnName] = useState('');
     const [columnMenuId, setColumnMenuId] = useState(null);
+    const [doneExpanded, setDoneExpanded] = useState(false);
+    const [confirmArchiveAll, setConfirmArchiveAll] = useState(false);
 
     const dragState = useRef({ type: null, sourceColIdx: null, cardIdx: null, overColIdx: null, overCardIdx: null });
     const touchTargetRef = useRef({ col: null, card: null });
@@ -1826,17 +1828,22 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
     const pendingSave = useRef(false);
     const boardScrollRef = useRef(null);
 
+    const DONE_COL_ID = '__done__';
+
     const items = data.lists.projects || [];
 
-    const columns = useMemo(() => {
+    const { columns, doneColumn } = useMemo(() => {
         const cols = [];
         let currentCol = null;
         const uncategorized = [];
+        const doneCards = [];
 
         items.forEach(item => {
             if (item.is_section) {
                 currentCol = { section: item, cards: [] };
                 cols.push(currentCol);
+            } else if (item.completed) {
+                doneCards.push(item);
             } else if (currentCol) {
                 currentCol.cards.push(item);
             } else {
@@ -1850,13 +1857,16 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
             cols[0].cards = [...uncategorized, ...cols[0].cards];
         }
 
-        return cols;
+        const done = { section: { id: DONE_COL_ID, text: 'Done', is_section: true }, cards: doneCards };
+        return { columns: cols, doneColumn: done };
     }, [items]);
+
+    const allColumns = useMemo(() => [...columns, doneColumn], [columns, doneColumn]);
 
     const rebuildItemsFromColumns = useCallback((newColumns) => {
         const flat = [];
         newColumns.forEach(col => {
-            if (col.section.id !== '__uncategorized__') {
+            if (col.section.id !== '__uncategorized__' && col.section.id !== DONE_COL_ID) {
                 flat.push(col.section);
             }
             col.cards.forEach(card => flat.push(card));
@@ -1910,7 +1920,7 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
             if (i !== columnIndex) return col;
             return { ...col, cards: [...col.cards, { id: tempId, text, completed: false, is_section: false, description: '', labels: [], due_date: '' }] };
         });
-        const newItems = rebuildItemsFromColumns(newCols);
+        const newItems = rebuildItemsFromColumns([...newCols, doneColumn]);
         const nextSortOrder = newItems.length - 1;
 
         const newItem = { text, completed: false, is_section: false, sort_order: nextSortOrder };
@@ -1993,6 +2003,42 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
         );
     };
 
+    const archiveCard = async (id) => {
+        setOpenCardId(null);
+        const apply = optimisticListUpdate(list => list.filter(item => item.id !== id));
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await propertyAPI.deleteListItem(id);
+                } else {
+                    apply();
+                }
+            },
+            apply,
+            { affectedLists: ['projects'] }
+        );
+        showToast('Card archived');
+    };
+
+    const archiveAllDone = async () => {
+        setConfirmArchiveAll(false);
+        const doneIds = doneColumn.cards.map(c => c.id);
+        if (doneIds.length === 0) return;
+        const apply = optimisticListUpdate(list => list.filter(item => !doneIds.includes(item.id)));
+        await updateData(
+            async () => {
+                if (useBackend) {
+                    await Promise.all(doneIds.map(id => propertyAPI.deleteListItem(id)));
+                } else {
+                    apply();
+                }
+            },
+            apply,
+            { affectedLists: ['projects'] }
+        );
+        showToast(`${doneIds.length} card${doneIds.length === 1 ? '' : 's'} archived`);
+    };
+
     const renameColumn = async (sectionId, newName) => {
         setEditingColumnId(null);
         const apply = optimisticListUpdate(list =>
@@ -2011,14 +2057,9 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
         );
     };
 
-    const toggleCardComplete = async (cardId) => {
-        const card = items.find(i => i.id === cardId);
-        if (!card) return;
-        await updateCardField(cardId, 'completed', !card.completed);
-    };
-
     // ---- Drag & Drop (HTML5) ----
     const handleColumnDragStart = (e, colIdx) => {
+        if (allColumns[colIdx]?.section.id === DONE_COL_ID) { e.preventDefault(); return; }
         dragState.current = { type: 'column', sourceColIdx: colIdx };
         setDragType('column');
         setDragSourceCol(colIdx);
@@ -2037,11 +2078,14 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
         if (dragState.current.type !== 'column') return;
         const from = dragState.current.sourceColIdx;
         if (from === colIdx) return;
+        if (allColumns[from]?.section.id === DONE_COL_ID) return;
+        if (allColumns[colIdx]?.section.id === DONE_COL_ID) return;
 
         const newCols = Array.from(columns);
         const [moved] = newCols.splice(from, 1);
         newCols.splice(colIdx, 0, moved);
-        persistOrder(rebuildItemsFromColumns(newCols));
+        const rebuilt = rebuildItemsFromColumns([...newCols, doneColumn]);
+        persistOrder(rebuilt);
     };
 
     const handleCardDragStart = (e, colIdx, cardIdx) => {
@@ -2065,7 +2109,7 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
         e.preventDefault();
         if (dragState.current.type !== 'card') return;
         setDragOverCol(colIdx);
-        setDragOverCard(columns[colIdx]?.cards.length ?? 0);
+        setDragOverCard(allColumns[colIdx]?.cards.length ?? 0);
     };
 
     const handleCardDrop = (e, targetColIdx, targetCardIdx) => {
@@ -2074,8 +2118,19 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
         if (dragState.current.type !== 'card') return;
 
         const { sourceColIdx, cardIdx } = dragState.current;
-        const newCols = columns.map(col => ({ ...col, cards: [...col.cards] }));
+        const newCols = allColumns.map(col => ({ ...col, cards: [...col.cards] }));
         const [movedCard] = newCols[sourceColIdx].cards.splice(cardIdx, 1);
+
+        const isDoneTarget = allColumns[targetColIdx]?.section.id === DONE_COL_ID;
+        const wasDoneSource = allColumns[sourceColIdx]?.section.id === DONE_COL_ID;
+        if (isDoneTarget && !movedCard.completed) {
+            movedCard.completed = true;
+            if (useBackend) propertyAPI.updateListItem(movedCard.id, { completed: true });
+        } else if (!isDoneTarget && wasDoneSource && movedCard.completed) {
+            movedCard.completed = false;
+            if (useBackend) propertyAPI.updateListItem(movedCard.id, { completed: false });
+        }
+
         const insertIdx = targetCardIdx !== undefined ? targetCardIdx : newCols[targetColIdx].cards.length;
         newCols[targetColIdx].cards.splice(insertIdx, 0, movedCard);
         persistOrder(rebuildItemsFromColumns(newCols));
@@ -2128,7 +2183,7 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
                         touchTargetRef.current.card = ci;
                         setDragOverCard(ci);
                     } else {
-                        touchTargetRef.current.card = columns[cIdx]?.cards.length ?? 0;
+                        touchTargetRef.current.card = allColumns[cIdx]?.cards.length ?? 0;
                         setDragOverCard(touchTargetRef.current.card);
                     }
                 }
@@ -2148,8 +2203,19 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
                 const { sourceColIdx: sCol, cardIdx: cIdx } = dragState.current;
                 const targetCol = touchTargetRef.current.col;
                 const targetCard = touchTargetRef.current.card;
-                const newCols = columns.map(col => ({ ...col, cards: [...col.cards] }));
+                const newCols = allColumns.map(col => ({ ...col, cards: [...col.cards] }));
                 const [movedCard] = newCols[sCol].cards.splice(cIdx, 1);
+
+                const isDoneTarget = allColumns[targetCol]?.section.id === DONE_COL_ID;
+                const wasDoneSource = allColumns[sCol]?.section.id === DONE_COL_ID;
+                if (isDoneTarget && !movedCard.completed) {
+                    movedCard.completed = true;
+                    if (useBackend) propertyAPI.updateListItem(movedCard.id, { completed: true });
+                } else if (!isDoneTarget && wasDoneSource && movedCard.completed) {
+                    movedCard.completed = false;
+                    if (useBackend) propertyAPI.updateListItem(movedCard.id, { completed: false });
+                }
+
                 const insertIdx = targetCard !== undefined && targetCard !== null ? targetCard : newCols[targetCol].cards.length;
                 const adjustedIdx = (sCol === targetCol && cIdx < insertIdx) ? Math.max(0, insertIdx - 1) : insertIdx;
                 newCols[targetCol].cards.splice(adjustedIdx, 0, movedCard);
@@ -2307,7 +2373,6 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
                                         className={`
                                             bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-pointer
                                             hover:shadow-md hover:border-gray-300 transition-all group/card
-                                            ${card.completed ? 'opacity-60' : ''}
                                             ${dragType === 'card' && dragOverCol === colIdx && dragOverCard === cardIdx ? 'border-t-2 border-t-emerald-400' : ''}
                                             ${dragType === 'card' && dragSourceCol === colIdx && dragState.current.cardIdx === cardIdx ? 'opacity-30 scale-95' : ''}
                                         `}
@@ -2322,15 +2387,7 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
                                             </div>
                                         )}
                                         <div className="flex items-start gap-2">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); toggleCardComplete(card.id); }}
-                                                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
-                                                    card.completed ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'
-                                                }`}
-                                            >
-                                                {card.completed && <Icons.Check />}
-                                            </button>
-                                            <span className={`flex-1 text-sm leading-snug ${card.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                            <span className="flex-1 text-sm leading-snug text-gray-800">
                                                 {card.text}
                                             </span>
                                             <div
@@ -2344,7 +2401,7 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
                                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                                             {card.due_date && (
                                                 <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
-                                                    new Date(card.due_date) < new Date() && !card.completed ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
+                                                    new Date(card.due_date) < new Date() ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
                                                 }`}>
                                                     <Icons.Clock />
                                                     {new Date(card.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -2425,6 +2482,120 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
                             <Icons.Plus /> Add another column
                         </button>
                     ) : null}
+
+                    {/* Done Column - always last */}
+                    {(() => {
+                        const doneColIdx = allColumns.length - 1;
+                        const col = doneColumn;
+                        return (
+                            <div
+                                key={DONE_COL_ID}
+                                data-kanban-col={doneColIdx}
+                                onDragOver={(e) => { e.preventDefault(); if (dragState.current.type === 'card') { setDragOverCol(doneColIdx); setDragOverCard(col.cards.length); } }}
+                                onDrop={(e) => { if (dragState.current.type === 'card') handleCardDrop(e, doneColIdx); }}
+                                className={`
+                                    bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col
+                                    w-[80vw] min-w-[80vw] md:w-72 md:min-w-[18rem] md:max-w-[18rem]
+                                    flex-shrink-0 snap-center transition-all duration-150 overflow-hidden
+                                    ${dragType === 'card' && dragOverCol === doneColIdx ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}
+                                `}
+                            >
+                                <button
+                                    onClick={() => setDoneExpanded(!doneExpanded)}
+                                    className="px-3 py-2.5 flex items-center gap-2 w-full text-left flex-shrink-0"
+                                >
+                                    <span className="text-emerald-600 text-lg">✓</span>
+                                    <h3 className="flex-1 font-bold text-sm text-emerald-700 uppercase tracking-wide">Done</h3>
+                                    <span className="text-xs text-emerald-600 font-semibold bg-emerald-200 px-1.5 py-0.5 rounded-full">{col.cards.length}</span>
+                                    <span className={`text-emerald-500 transition-transform ${doneExpanded ? 'rotate-180' : ''}`}>
+                                        <Icons.ChevronDown />
+                                    </span>
+                                </button>
+
+                                {doneExpanded && (
+                                    <>
+                                        {col.cards.length > 0 && (
+                                            <div className="px-2 pb-1">
+                                                <button
+                                                    onClick={() => setConfirmArchiveAll(true)}
+                                                    className="w-full text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 py-1.5 px-2 rounded-lg flex items-center gap-1.5 transition-colors"
+                                                >
+                                                    <Icons.Archive /> Archive all cards in Done
+                                                </button>
+                                            </div>
+                                        )}
+                                        <div
+                                            className="flex-1 overflow-y-auto px-2 pb-2 space-y-2 min-h-[2rem] kanban-scroll"
+                                            onDragOver={(e) => handleColumnBodyDragOver(e, doneColIdx)}
+                                            onDrop={(e) => { if (dragState.current.type === 'card') handleCardDrop(e, doneColIdx); }}
+                                        >
+                                            {col.cards.map((card, cardIdx) => (
+                                                <div
+                                                    key={card.id}
+                                                    data-kanban-card={cardIdx}
+                                                    draggable={true}
+                                                    onDragStart={(e) => handleCardDragStart(e, doneColIdx, cardIdx)}
+                                                    onDragOver={(e) => handleCardDragOver(e, doneColIdx, cardIdx)}
+                                                    onDrop={(e) => handleCardDrop(e, doneColIdx, cardIdx)}
+                                                    onDragEnd={handleDragEnd}
+                                                    onTouchStart={(e) => {
+                                                        const handle = e.target.closest('[data-drag-handle]');
+                                                        if (handle) handleCardTouchStart(e, doneColIdx, cardIdx);
+                                                    }}
+                                                    onClick={() => setOpenCardId(card.id)}
+                                                    className={`
+                                                        bg-white rounded-lg shadow-sm border border-emerald-100 p-3 cursor-pointer
+                                                        hover:shadow-md transition-all group/card opacity-70
+                                                        ${dragType === 'card' && dragOverCol === doneColIdx && dragOverCard === cardIdx ? 'border-t-2 border-t-emerald-400' : ''}
+                                                    `}
+                                                >
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-emerald-500 mt-0.5 flex-shrink-0">
+                                                            <Icons.Check />
+                                                        </span>
+                                                        <span className="flex-1 text-sm leading-snug text-gray-500 line-through">
+                                                            {card.text}
+                                                        </span>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); archiveCard(card.id); }}
+                                                            className="text-gray-300 hover:text-red-400 p-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity flex-shrink-0"
+                                                            title="Archive"
+                                                        >
+                                                            <Icons.Archive />
+                                                        </button>
+                                                        <div
+                                                            data-drag-handle
+                                                            className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing p-0.5 touch-none opacity-0 group-hover/card:opacity-100 md:opacity-60 transition-opacity"
+                                                        >
+                                                            <Icons.DragHandle />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {col.cards.length === 0 && !dragType && (
+                                                <div className="text-center text-emerald-400 text-xs py-4">
+                                                    Drag cards here to mark as done
+                                                </div>
+                                            )}
+
+                                            {dragType === 'card' && dragOverCol === doneColIdx && col.cards.length === 0 && (
+                                                <div className="h-16 border-2 border-dashed border-emerald-300 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                                    <span className="text-emerald-500 text-xs font-medium">Drop to complete</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+
+                                {!doneExpanded && dragType === 'card' && dragOverCol === doneColIdx && (
+                                    <div className="mx-2 mb-2 h-10 border-2 border-dashed border-emerald-300 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                        <span className="text-emerald-500 text-xs font-medium">Drop to complete</span>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
 
@@ -2432,11 +2603,12 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
             {openCard && (
                 <KanbanCardModal
                     card={openCard}
-                    columnName={columns.find(c => c.cards.some(cd => cd.id === openCard.id))?.section.text || ''}
+                    columnName={allColumns.find(c => c.cards.some(cd => cd.id === openCard.id))?.section.text || ''}
                     onClose={() => setOpenCardId(null)}
                     onUpdateField={updateCardField}
-                    onToggleComplete={toggleCardComplete}
                     onDelete={(id) => setConfirmDelete(id)}
+                    onArchive={(id) => archiveCard(id)}
+                    isDone={openCard.completed}
                     showToast={showToast}
                 />
             )}
@@ -2449,12 +2621,21 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
                     onCancel={() => setConfirmDelete(null)}
                 />
             )}
+
+            {/* Confirm Archive All */}
+            {confirmArchiveAll && (
+                <ConfirmDialog
+                    message={`Archive all ${doneColumn.cards.length} completed card${doneColumn.cards.length === 1 ? '' : 's'}? This cannot be undone.`}
+                    onConfirm={archiveAllDone}
+                    onCancel={() => setConfirmArchiveAll(false)}
+                />
+            )}
         </div>
     );
 }
 
 // Trello-style card detail modal
-function KanbanCardModal({ card, columnName, onClose, onUpdateField, onToggleComplete, onDelete, showToast }) {
+function KanbanCardModal({ card, columnName, onClose, onUpdateField, onDelete, onArchive, isDone, showToast }) {
     const [editingTitle, setEditingTitle] = useState(false);
     const [titleText, setTitleText] = useState(card.text);
     const [descText, setDescText] = useState(card.description || '');
@@ -2514,35 +2695,27 @@ function KanbanCardModal({ card, columnName, onClose, onUpdateField, onToggleCom
 
                 <div className="p-6">
                     {/* Title */}
-                    <div className="flex items-start gap-3 mb-1">
-                        <button
-                            onClick={() => onToggleComplete(card.id)}
-                            className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 transition-colors ${
-                                card.completed ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'
-                            }`}
-                        >
-                            {card.completed && <Icons.Check />}
-                        </button>
+                    <div className="mb-1">
                         {editingTitle ? (
                             <textarea
                                 value={titleText}
                                 onChange={(e) => setTitleText(e.target.value)}
                                 onBlur={saveTitle}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveTitle(); } if (e.key === 'Escape') { setTitleText(card.text); setEditingTitle(false); } }}
-                                className="flex-1 text-xl font-bold text-gray-800 bg-white p-2 rounded border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
+                                className="w-full text-xl font-bold text-gray-800 bg-white p-2 rounded border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
                                 rows={1}
                                 autoFocus
                             />
                         ) : (
                             <h2
                                 onClick={() => setEditingTitle(true)}
-                                className={`flex-1 text-xl font-bold cursor-pointer hover:bg-gray-100 rounded px-2 py-1 -mx-2 -my-1 ${card.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}
+                                className="text-xl font-bold cursor-pointer hover:bg-gray-100 rounded px-2 py-1 -mx-2 -my-1 text-gray-800"
                             >
                                 {card.text}
                             </h2>
                         )}
                     </div>
-                    <p className="text-xs text-gray-400 ml-9 mb-6">in column <span className="font-semibold text-gray-500">{columnName}</span></p>
+                    <p className="text-xs text-gray-400 mb-6">in column <span className="font-semibold text-gray-500">{columnName}</span></p>
 
                     <div className="flex flex-col md:flex-row gap-6">
                         {/* Main content */}
@@ -2572,16 +2745,16 @@ function KanbanCardModal({ card, columnName, onClose, onUpdateField, onToggleCom
                                     <button
                                         onClick={() => setShowDueDate(true)}
                                         className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded ${
-                                            new Date(card.due_date) < new Date() && !card.completed
-                                                ? 'bg-red-100 text-red-700'
-                                                : card.completed
-                                                    ? 'bg-emerald-100 text-emerald-700'
+                                            isDone
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : new Date(card.due_date) < new Date()
+                                                    ? 'bg-red-100 text-red-700'
                                                     : 'bg-gray-200 text-gray-700'
                                         }`}
                                     >
                                         <Icons.Clock />
                                         {new Date(card.due_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                                        {card.completed && <span className="bg-emerald-500 text-white text-xs px-1.5 py-0.5 rounded ml-1">Complete</span>}
+                                        {isDone && <span className="bg-emerald-500 text-white text-xs px-1.5 py-0.5 rounded ml-1">Done</span>}
                                     </button>
                                 </div>
                             )}
@@ -2644,6 +2817,17 @@ function KanbanCardModal({ card, columnName, onClose, onUpdateField, onToggleCom
                             </button>
 
                             <hr className="my-3 border-gray-300" />
+
+                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 hidden md:block">Actions</h4>
+
+                            {isDone && (
+                                <button
+                                    onClick={() => onArchive(card.id)}
+                                    className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium py-2 px-3 rounded-lg flex items-center gap-2 transition-colors"
+                                >
+                                    <Icons.Archive /> Archive
+                                </button>
+                            )}
 
                             <button
                                 onClick={() => onDelete(card.id)}
