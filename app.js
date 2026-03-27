@@ -1939,26 +1939,28 @@ function KanbanView({ data, setData, showToast, useBackend, updateData }) {
         setNewCardText('');
         setAddingToColumn(null);
 
-        const newCols = columns.map((col, i) => {
-            if (i !== columnIndex) return col;
-            return { ...col, cards: [...col.cards, { id: tempId, text, completed: false, is_section: false, description: '', labels: [], due_date: '' }] };
+        const newCardData = { id: tempId, text, completed: false, is_section: false, description: '', labels: [], due_date: '' };
+        const newCols = columns.map((c, i) => {
+            if (i !== columnIndex) return c;
+            return { ...c, cards: [newCardData, ...c.cards] };
         });
         const newItems = rebuildItemsFromColumns([...newCols, doneColumn]);
-        const nextSortOrder = newItems.length - 1;
-
-        const newItem = { text, completed: false, is_section: false, sort_order: nextSortOrder };
         const apply = optimisticListUpdate(() => newItems);
 
         await updateData(
             async () => {
                 if (useBackend) {
-                    await propertyAPI.addListItem('projects', newItem);
+                    const added = await propertyAPI.addListItem('projects', { text, completed: false, is_section: false, sort_order: 0 });
+                    const finalItems = newItems.map(item => item.id === tempId && added ? { ...item, id: added.id } : item);
+                    await Promise.all(finalItems.map((item, idx) =>
+                        propertyAPI.updateListItem(item.id, { sort_order: idx })
+                    ));
                 } else {
                     apply();
                 }
             },
             apply,
-            ['projects']
+            { skipRefetch: true }
         );
         showToast('Card added!');
     };
