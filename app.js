@@ -393,13 +393,19 @@ function PropertyManager() {
 
         const scheduleReload = () => {
             clearTimeout(reloadTimeout);
+            // Snapshot epoch NOW (when the event arrives), not when the timer fires.
+            // This means any mutation that started before the event was received will
+            // already have incremented the epoch and this reload will be discarded,
+            // preventing a stale full-reload from overwriting an in-flight addItem.
+            const epochWhenScheduled = mutationEpochRef.current;
             reloadTimeout = setTimeout(async () => {
-                const epochAtStart = mutationEpochRef.current;
+                // Bail out if any mutation started since the event arrived
+                if (mutationEpochRef.current !== epochWhenScheduled) return;
                 try {
                     propertyAPI.clearCache();
                     const backendData = await propertyAPI.getAllData();
-                    // Only apply if no mutation started while we were fetching
-                    if (mutationEpochRef.current === epochAtStart) {
+                    // Also bail out if any mutation started while we were fetching
+                    if (mutationEpochRef.current === epochWhenScheduled) {
                         setData(backendData);
                     }
                 } catch (e) {
@@ -415,10 +421,21 @@ function PropertyManager() {
 
         connect();
 
+        // Track when the page was last hidden so we can skip spurious
+        // visibilitychange events that iOS fires when the soft keyboard
+        // opens or closes (those hide/show cycles are very short).
+        let hiddenAt = 0;
+        const MIN_BACKGROUND_MS = 3000; // only reload if hidden for 3+ seconds
+
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                connect();
-                scheduleReload();
+            if (document.visibilityState === 'hidden') {
+                hiddenAt = Date.now();
+            } else if (document.visibilityState === 'visible') {
+                const hiddenDuration = Date.now() - hiddenAt;
+                if (hiddenDuration >= MIN_BACKGROUND_MS) {
+                    connect();
+                    scheduleReload();
+                }
             }
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -1275,7 +1292,21 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
         await updateData(
             async () => {
                 if (useBackend) {
-                    await propertyAPI.addListItem(listName, newItem);
+                    const added = await propertyAPI.addListItem(listName, newItem);
+                    // Swap the client-side tempId for the real DB-assigned id so that
+                    // any toggle/edit/delete between now and the refetch targets the
+                    // correct row rather than a non-existent client-generated UUID.
+                    if (added && added.id) {
+                        setData(prev => ({
+                            ...prev,
+                            lists: {
+                                ...prev.lists,
+                                [listName]: (prev.lists[listName] || []).map(i =>
+                                    i.id === tempId ? { ...i, id: added.id } : i
+                                ),
+                            },
+                        }));
+                    }
                 } else {
                     apply();
                 }
@@ -1301,7 +1332,18 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
         await updateData(
             async () => {
                 if (useBackend) {
-                    await propertyAPI.addListItem(listName, newSection);
+                    const added = await propertyAPI.addListItem(listName, newSection);
+                    if (added && added.id) {
+                        setData(prev => ({
+                            ...prev,
+                            lists: {
+                                ...prev.lists,
+                                [listName]: (prev.lists[listName] || []).map(i =>
+                                    i.id === tempId ? { ...i, id: added.id } : i
+                                ),
+                            },
+                        }));
+                    }
                 } else {
                     apply();
                 }
