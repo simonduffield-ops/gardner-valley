@@ -1264,6 +1264,9 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
     const saveOrderTimer = useRef(null);
     const pendingSave = useRef(false);
     const reorderedItemsRef = useRef(null);
+    // Tracks items whose toggle is currently in flight to prevent ghost-click
+    // double-fires on iOS (touchend + click both firing on the same tap).
+    const togglingItems = useRef(new Set());
 
     const items = data.lists[activeList] || [];
 
@@ -1355,8 +1358,15 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
     };
 
     const toggleItem = async (id) => {
+        // Guard against iOS ghost-click double-fires (touchend + click on same tap)
+        if (togglingItems.current.has(id)) return;
+        togglingItems.current.add(id);
+
         const item = items.find(i => i.id === id);
-        if (!item) return;
+        if (!item) {
+            togglingItems.current.delete(id);
+            return;
+        }
         const newValue = !item[toggleField];
         const listName = activeList;
 
@@ -1364,17 +1374,21 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
             list.map(i => i.id === id ? { ...i, [toggleField]: newValue } : i)
         );
 
-        await updateData(
-            async () => {
-                if (useBackend) {
-                    await propertyAPI.updateListItem(id, { [toggleField]: newValue });
-                } else {
-                    apply();
-                }
-            },
-            apply,
-            { skipRefetch: true }
-        );
+        try {
+            await updateData(
+                async () => {
+                    if (useBackend) {
+                        await propertyAPI.updateListItem(id, { [toggleField]: newValue });
+                    } else {
+                        apply();
+                    }
+                },
+                apply,
+                { skipRefetch: true }
+            );
+        } finally {
+            togglingItems.current.delete(id);
+        }
     };
 
     const deleteItem = async (id) => {
@@ -1632,6 +1646,7 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
                 {renderDragHandle(actualIndex)}
                 <button
                     onClick={() => toggleItem(item.id)}
+                    onTouchEnd={(e) => { e.preventDefault(); toggleItem(item.id); }}
                     className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                         isToggled ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'
                     }`}
@@ -1786,6 +1801,7 @@ function DraggableListView({ data, setData, showToast, useBackend, updateData, t
                                 >
                                     <button
                                         onClick={() => toggleItem(item.id)}
+                                        onTouchEnd={(e) => { e.preventDefault(); toggleItem(item.id); }}
                                         className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 bg-emerald-500 border-emerald-500"
                                     >
                                         <Icons.Check />
