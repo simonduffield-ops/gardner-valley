@@ -35,6 +35,10 @@ class PropertyAPI {
 
     clearCache() {
         this.cache.clear();
+        // Also drop any in-flight deduplicated requests so the next call
+        // issues a fresh network request rather than joining a stale promise
+        // that was started before the cache was invalidated.
+        this.pendingRequests.clear();
     }
 
     // Request deduplication - prevents multiple identical requests
@@ -294,8 +298,14 @@ class PropertyAPI {
     }
 
     invalidateListCache(listType) {
-        this.cache.delete(this.getCacheKey('list_items_all'));
-        if (listType) this.cache.delete(this.getCacheKey('list_items', { listType }));
+        const allKey = this.getCacheKey('list_items_all');
+        this.cache.delete(allKey);
+        this.pendingRequests.delete(allKey);
+        if (listType) {
+            const typeKey = this.getCacheKey('list_items', { listType });
+            this.cache.delete(typeKey);
+            this.pendingRequests.delete(typeKey);
+        }
     }
 
     async addListItem(listType, item) {
